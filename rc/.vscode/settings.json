@@ -1,0 +1,33 @@
+{
+    "insert-unicode.favorites": {
+        "directories": {},
+        "items": [
+            [
+                11013,
+                65039
+            ],
+            [
+                10145,
+                65039
+            ],
+            [
+                11014,
+                65039
+            ],
+            [
+                11015,
+                65039
+            ],
+            [
+                127358,
+                65039
+            ],
+            [
+                10062
+            ]
+        ]
+    },
+    "editor.detectIndentation": false,
+    "editor.tabSize": 2,
+    "editor.useTabStops": false
+}
