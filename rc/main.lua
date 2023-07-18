@@ -1,15 +1,18 @@
+---------- PLAYER ----------
+
 function draw_player(x, y, dir, size)
   circfill(x, y, size, 6)
   pset(x + cos(dir) * size, y + sin(dir) * size, 8)
 end
 
 player = {}
-player.pos = vec:new(6.5, 8.5)
+player.pos = vec:new(1.5, 7.5)
 player.alt = 0.5
 player.size = 2.5
-player.dir = 0
+player.dir = 0.75
 player.speed = 1 / 8
 player.turnrate = 0.0125
+player.radius = 0.2
 
 function player:draw()
   local screenpos = self.pos * 8
@@ -28,20 +31,52 @@ end
 
 function player:update()
   self.dir += (btnb(⬅️) - btnb(➡️)) * self.turnrate
-  self.pos += self:getunitdir() * self.speed * (btnb(⬆️) - btnb(⬇️))
+  local mov = self:getunitdir() * self.speed * (btnb(⬆️) - btnb(⬇️))
+
+  local my = flr(self.pos.y)
+  local nx = flr(self.pos.x + sgn(mov.x)*self.radius)
+  if (not luamap[nx | my << 8]) self.pos.x += mov.x
+
+  local mx = flr(self.pos.x)
+  local ny = flr(self.pos.y + sgn(mov.y)*self.radius)
+  if (not luamap[mx | ny << 8]) self.pos.y += mov.y
 end
 
---https://iq.opengenus.org/2d-line-intersection/#:~:text=Step%201%20%3A%20Input%20four%20coordinates,of%20slope%20of%20each%20line.
-function lineintersection(x1, y1, x2, y2, x3, y3, x4, y4)
-  local x12 = x1 - x2
-  local x34 = x3 - x4
-  local y12 = y1 - y2
-  local y34 = y3 - y4
-  local c = x12 * y34 - y12 * x34
-  if (c~=0) then
-    local a = x1 * y2 - y1 * x2
-    local b = x3 * y4 - y3 * x4
-    return (a * x34 - b * x12 ) / c, (a * y34 - b * y12) / c
+function player:copytocam()
+  cam_x = self.pos.x
+  cam_y = self.pos.y
+  cam_z = self.alt
+  setcamdir(self.dir)
+end
+
+---------- INIT ----------
+
+function _init()
+  setupcamera()
+  setFOV(0.3)
+  buildluamap()
+end
+
+function setupcamera(startx, starty, startz, startdir)
+  cam_x = startx or 0
+  cam_y = starty or 0
+  cam_z = startz or 0.5
+  setcamdir(startdir)
+end
+
+function setcamdir(newdir)
+  cam_dir = newdir or 0
+  cam_dircos = cos(cam_dir)
+  cam_dirsin = sin(cam_dir)
+end
+
+function setFOV(fov)
+  projplanedist = -128 * cos(fov/2) / sin(fov/2) --screen width / tan(fov/2)
+  rayDir = {}
+  antiFishEye = {}
+  for x=-64,63 do
+    rayDir[x] = atan2(projplanedist, x)
+    antiFishEye[x] = 1 / cos(rayDir[x])
   end
 end
 
@@ -69,6 +104,20 @@ function buildluamap()
         luamap[x | y << 8] = cell
       end
     end
+  end
+end
+
+--https://iq.opengenus.org/2d-line-intersection/#:~:text=Step%201%20%3A%20Input%20four%20coordinates,of%20slope%20of%20each%20line.
+function lineintersection(x1, y1, x2, y2, x3, y3, x4, y4)
+  local x12 = x1 - x2
+  local x34 = x3 - x4
+  local y12 = y1 - y2
+  local y34 = y3 - y4
+  local c = x12 * y34 - y12 * x34
+  if (c~=0) then
+    local a = x1 * y2 - y1 * x2
+    local b = x3 * y4 - y3 * x4
+    return (a * x34 - b * x12 ) / c, (a * y34 - b * y12) / c
   end
 end
 
@@ -130,13 +179,19 @@ function rayDDA(px, py, rx, ry, md)
   end
 end
 
-function setFOV(fov)
-  projplanedist = -128 * cos(fov/2) / sin(fov/2) --screen width / tan(fov/2)
-  rayDir = {}
-  antiFishEye = {}
-  for x=-64,63 do
-    rayDir[x] = atan2(projplanedist, x)
-    antiFishEye[x] = 1 / cos(rayDir[x])
+function deductnormal(mt, cx, cy)
+  if mt.x1 then
+    return vec:new(mt.y1 - mt.y2, mt.x2-mt.x1):unit()
+  end
+  local x,y = cx % 1, cy % 1
+  if x < 0.0005 then
+    return vec:new(-1,0)
+  elseif x > 0.9995 then
+    return vec:new(1,0)
+  elseif y < 0.0005 then
+    return vec:new(0,-1)
+  else
+    return vec:new(0,1)
   end
 end
 
@@ -236,7 +291,7 @@ function getFloorPos(px, py, sx, sy, dir, alt)
 end
 
 function drawFloor(px, py, dir, alt)
-  for y=8,63 do
+  for y=1,63 do
     local lx,ly = getFloorPos(px,py,-64,y,dir,alt)
     local rx,ry = getFloorPos(px,py,63,y,dir,alt)
 
@@ -244,10 +299,10 @@ function drawFloor(px, py, dir, alt)
   end
 end
 
-function round(val)
-  local d = val % 1
-  if d < 0.5 then return flr(val) else return flr(val+1) end
-end
+--function round(val)
+--  local d = val % 1
+--  if d < 0.5 then return flr(val) else return flr(val+1) end
+--end
 
 function drawHorizon(px, py, dir, alt)
   for x=-64,63 do
@@ -274,11 +329,6 @@ function drawHorizon(px, py, dir, alt)
       --sspr((m%16 + c)*8,flr(m/16)*8,1,8,x,-halfwall+1,1,halfwall*2)
     end
   end
-end
-
-function _init()
-  setFOV(0.3)
-  buildluamap()
 end
 
 function _update()
@@ -330,7 +380,7 @@ function _draw()
     drawFloor(px,py,pd, alt)
     drawHorizon(px,py,pd, alt)
 
-    drawFloorTile(7,8,0,px,py,pd,alt + sin(t()) * 0.4)
+    --drawFloorTile(7,8,0,px,py,pd,alt + sin(t()) * 0.4)
     --[[local x1,y1 = getScreenPos(px, py, 2, 2, pd, alt)
     local x2,y2 = getScreenPos(px, py, 3, 2, pd, alt)
     local x3,y3 = getScreenPos(px, py, 3, 3, pd, alt)
