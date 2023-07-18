@@ -175,17 +175,16 @@ function quadfillfloor(x0,y0,x1,y1,x2,y2,x3,y3,px,py,dir,alt)
   s3 = x0+(x2-x0)/(y2-y0)*(y1-y0)
   s4 = x1+(x3-x1)/(y3-y1)*(y2-y1)
 
-  local z = abs(s1 - x1) - abs(s3- x1)
-  if z == 0 then
-    z = abs(s2 - x2) < abs(s4- x2)
-  else
-    z = z < 0
+  if abs(s1 - x1) < abs(s3- x1) then
+    s1, s2 = s3, s4
   end
-  if (z) s1,s2,x2 = s3,x2,s4
+
+  if (s1 < x1) x1, s1 = s1, x1
+  if (s2 < x2) x2, s2 = s2, x2
 
   floortrapeze(x0,x0,x1,s1,y0,y1,px,py,dir,alt)
-  floortrapeze(s1,x1,s2,x2,y1,y2,px,py,dir,alt)
-  floortrapeze(s2,x2,x3,x3,y2,y3,px,py,dir,alt)
+  floortrapeze(x1,s1,x2,s2,y1,y2,px,py,dir,alt)
+  floortrapeze(x2,s2,x3,x3,y2,y3,px,py,dir,alt)
 end
 function floortrapeze(l,r,lt,rt,y0,y1,px,py,dir,alt)
   lt,rt=(lt-l)/(y1-y0),(rt-r)/(y1-y0)
@@ -195,12 +194,11 @@ function floortrapeze(l,r,lt,rt,y0,y1,px,py,dir,alt)
     --rectfill(l,y0,r,y0)
     
     local la,ra = min(max(-64,flr(l)), 63), min(max(-64,flr(r)), 63)
-    if (la < ra) la,ra = ra,la
 
     local lx,ly = getFloorPos(px,py,la,y0,dir,alt)
     local rx,ry = getFloorPos(px,py,ra,y0,dir,alt)
 
-    local sd = la - ra
+    local sd = ra - la
     tline(la,y0,ra,y0,lx,ly,(rx-lx)/sd,(ry-ly)/sd)
 
     l+=lt
@@ -218,7 +216,6 @@ function drawFloorTile(fx, fy, s, px, py, dir, alt)
     add(points,{sx,sy})
   end
 
-  color(7)
   quadfillfloor(
     points[1][1],points[1][2],
     points[2][1],points[2][2],
