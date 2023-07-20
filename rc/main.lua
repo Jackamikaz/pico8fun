@@ -25,13 +25,13 @@ function player:getunitdir()
   return vec:new(cos(self.dir), sin(self.dir))
 end
 
-function btnb(b)
+function btnn(b)
   return btn(b) and 1 or 0
 end
 
 function player:update()
-  self.dir += (btnb(⬅️) - btnb(➡️)) * self.turnrate
-  local mov = self:getunitdir() * self.speed * (btnb(⬆️) - btnb(⬇️))
+  self.dir += (btnn(⬅️) - btnn(➡️)) * self.turnrate
+  local mov = self:getunitdir() * self.speed * (btnn(⬆️) - btnn(⬇️))
 
   local my = flr(self.pos.y)
   local nx = flr(self.pos.x + sgn(mov.x)*self.radius)
@@ -223,15 +223,18 @@ function quadfillfloor(x0,y0,x1,y1,x2,y2,x3,y3,px,py,dir,alt)
   if (y1 > y3) x1,y1,x3,y3 = x3,y3,x1,y1
   if (y1 > y2) x1,y1,x2,y2 = x2,y2,x1,y1
 
-  local s1,s2,s3,s4
+  local s1,s2,s3--,s4
 
   s1 = x0+(x3-x0)/(y3-y0)*(y1-y0)
-  s2 = x0+(x3-x0)/(y3-y0)*(y2-y0)
+  --s2 = x0+(x3-x0)/(y3-y0)*(y2-y0)
   s3 = x0+(x2-x0)/(y2-y0)*(y1-y0)
-  s4 = x1+(x3-x1)/(y3-y1)*(y2-y1)
+  --s4 = x1+(x3-x1)/(y3-y1)*(y2-y1)
 
   if abs(s1 - x1) < abs(s3- x1) then
-    s1, s2 = s3, s4
+    s1 = s3
+    s2 = x1+(x3-x1)/(y3-y1)*(y2-y1) -- s4
+  else
+    s2 = x0+(x3-x0)/(y3-y0)*(y2-y0)
   end
 
   if (s1 < x1) x1, s1 = s1, x1

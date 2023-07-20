@@ -1,4 +1,4 @@
-function bresenham(x1, y1, x2, y2, col)
+function bresenham(x1, y1, x2, y2)
   x1 = flr(x1)
   y1 = flr(y1)
   x2 = flr(x2)
@@ -12,7 +12,7 @@ function bresenham(x1, y1, x2, y2, col)
   local err = dx+dy
 
   while true do
-    pset(x1,y1, col or 7)
+    pset(x1,y1)
     if x1==x2 and y1 == y2 then return end
     local e2 = err * 2
     if e2 >= dy then
