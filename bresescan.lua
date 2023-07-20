@@ -44,6 +44,26 @@ function bresenhamlog(x1, y1, x2, y2)
   end
 end
 
+function floatline(x,y,x2,y2)
+  local dx, dy = x2-x, y2-y
+  if abs(dx) >= abs(dy) then
+    local s = sgn(dx)
+    local r = dy/dx*s
+    while (x2 - x)*s > 0 do
+      pset(x,y)
+      x += s
+      y += r
+    end
+  else
+    local s = sgn(dy)
+    local r = dx/dy*s
+    while (y2 - y)*s > 0 do
+      pset(x,y)
+      x += r
+      y += s
+    end
+  end
+end
 
 function btnn(b)
   return btn(b) and 1 or 0
@@ -72,22 +92,44 @@ function _draw()
     local ix,iy = i*2+1, i*2+2
     bresenham(ltop[ix],ltop[iy],rtop[ix],rtop[iy])
     col = (col+1) % 15
-  end]]
+  end
+
+  -----------------]]
+
+  local col = 1
 
   local l = bresenhamlog(x1,y1,x2,y2)
   local tx,ty = py - y2, x2 - px
   local tx2,ty2 = py - y1, x1 - px
 
-  local col = 1
-  for i=1,30 do
+  local sx,sy = 0,0
+  local fc
+  if abs(x2-x1) < abs(y2-y1) then
+    sx = sgn(y1-y2)
+    fc = max(abs(py-y1),abs(py-y2))
+  else
+    sy = sgn(x2-x1)
+    fc = max(abs(px-x1),abs(px-x2))
+  end
+
+  local ix,iy = 0,0
+  local mj = 1
+  for i=1,fc do
     color(col+1)
 
-    for j=1,#l,2 do
-      local x,y = i+l[j],l[j+1]
+    for j=mj,#l,2 do
+      local x,y = ix+l[j],iy+l[j+1]
       local vx, vy = x - px, y - py
       if vx*tx + vy*ty > 0 then break end
-      if (vx*tx2 + vy*ty2 > 0) pset(x,y)
+      if vx*tx2 + vy*ty2 > 0 then
+        pset(x,y)
+      else
+        mj = j
+      end
     end
+
+    ix += sx
+    iy += sy
 
     col = (col+1) % 15
   end
