@@ -1,12 +1,6 @@
 ---------- PLAYER ----------
-
-function draw_player(x, y, dir, size)
-  circfill(x, y, size, 6)
-  pset(x + cos(dir) * size, y + sin(dir) * size, 8)
-end
-
 player = {}
-player.pos = vec:new(1.5, 7.5)
+player.pos = vec:new(4.5, 23.5)
 player.alt = 0.5
 player.size = 2.5
 player.dir = 0.75
@@ -53,7 +47,7 @@ end
 
 function _init()
   setupcamera()
-  setFOV(0.3)
+  setfov(0.3)
   buildluamap()
 end
 
@@ -70,7 +64,7 @@ function setcamdir(newdir)
   cam_dirsin = sin(cam_dir)
 end
 
-function setFOV(fov)
+function setfov(fov)
   projplanedist = -128 * cos(fov/2) / sin(fov/2) --screen width / tan(fov/2)
   rayDir = {}
   antiFishEye = {}
@@ -107,6 +101,8 @@ function buildluamap()
   end
 end
 
+---------- COLLISIONS ----------
+
 --https://iq.opengenus.org/2d-line-intersection/#:~:text=Step%201%20%3A%20Input%20four%20coordinates,of%20slope%20of%20each%20line.
 function lineintersection(x1, y1, x2, y2, x3, y3, x4, y4)
   local x12 = x1 - x2
@@ -121,7 +117,7 @@ function lineintersection(x1, y1, x2, y2, x3, y3, x4, y4)
   end
 end
 
-function rayDDA(px, py, rx, ry, md)
+function raydda(px, py, rx, ry, md)
   local x2,y2 = px+rx,py+ry
   --[[
   px, py : player pos
@@ -179,31 +175,18 @@ function rayDDA(px, py, rx, ry, md)
   end
 end
 
-function deductnormal(mt, cx, cy)
-  if mt.x1 then
-    return vec:new(mt.y1 - mt.y2, mt.x2-mt.x1):unit()
-  end
-  local x,y = cx % 1, cy % 1
-  if x < 0.0005 then
-    return vec:new(-1,0)
-  elseif x > 0.9995 then
-    return vec:new(1,0)
-  elseif y < 0.0005 then
-    return vec:new(0,-1)
-  else
-    return vec:new(0,1)
-  end
-end
+---------- RAYCAST ----------
 
-function getScreenPos(px, py, tx, ty, dir, alt)
-  local dx, dy = tx - px, ty - py
+-- translate world position to screen coordinates
+function getscreenpos(mx,my,mz)
+  local dx, dy = mx - cam_x, my - cam_y
   local d = sqrt(dx*dx+dy*dy)
-  local raydir = atan2(dx,dy) - dir
+  local raydir = atan2(dx,dy) - cam_dir
   local crd = cos(raydir)
   local afe = 1 / crd
   local x = projplanedist * sin(raydir) * afe
   local depthfactor = afe * projplanedist / d
-  local y = alt * depthfactor
+  local y = mz * depthfactor
   if (abs(raydir)+0.25)%1 >= 0.5 then
     if -crd * d > projplanedist/128 then
       return
@@ -216,7 +199,7 @@ function getScreenPos(px, py, tx, ty, dir, alt)
 end
 
 -- adapted from @p01 trifill https://www.lexaloffle.com/bbs/?pid=azure_trifillr4-1
-function quadfillfloor(x0,y0,x1,y1,x2,y2,x3,y3,px,py,dir,alt)
+function quadfillfloor(alt,x0,y0,x1,y1,x2,y2,x3,y3)
   if (y0 > y1) x0,y0,x1,y1 = x1,y1,x0,y0
   if (y2 > y3) x2,y2,x3,y3 = x3,y3,x2,y2
   if (y0 > y2) x0,y0,x2,y2 = x2,y2,x0,y0
@@ -240,11 +223,11 @@ function quadfillfloor(x0,y0,x1,y1,x2,y2,x3,y3,px,py,dir,alt)
   if (s1 < x1) x1, s1 = s1, x1
   if (s2 < x2) x2, s2 = s2, x2
 
-  floortrapeze(x0,x0,x1,s1,y0,y1,px,py,dir,alt)
-  floortrapeze(x1,s1,x2,s2,y1,y2,px,py,dir,alt)
-  floortrapeze(x2,s2,x3,x3,y2,y3,px,py,dir,alt)
+  floortrapeze(x0,x0,x1,s1,y0,y1,alt)
+  floortrapeze(x1,s1,x2,s2,y1,y2,alt)
+  floortrapeze(x2,s2,x3,x3,y2,y3,alt)
 end
-function floortrapeze(l,r,lt,rt,y0,y1,px,py,dir,alt)
+function floortrapeze(l,r,lt,rt,y0,y1,alt)
   lt,rt=(lt-l)/(y1-y0),(rt-r)/(y1-y0)
   --if(y0<0)l,r,y0=l-y0*lt,r-y0*rt,0
   --y1=min(y1,128)
@@ -253,8 +236,8 @@ function floortrapeze(l,r,lt,rt,y0,y1,px,py,dir,alt)
     
     local la,ra = min(max(-64,flr(l)), 63), min(max(-64,flr(r)), 63)
 
-    local lx,ly = getFloorPos(px,py,la,y0,dir,alt)
-    local rx,ry = getFloorPos(px,py,ra,y0,dir,alt)
+    local lx,ly = getfloorpos(la,y0,alt)
+    local rx,ry = getfloorpos(ra,y0,alt)
 
     local sd = ra - la
     tline(la,y0,ra,y0,lx,ly,(rx-lx)/sd,(ry-ly)/sd)
@@ -264,39 +247,29 @@ function floortrapeze(l,r,lt,rt,y0,y1,px,py,dir,alt)
   end
 end
 
-offsets = {{0,0},{1,0},{1,1},{0,1}}
-
-function drawFloorTile(fx, fy, s, px, py, dir, alt)
+offsets = {0,0,1,0,1,1,0,1}
+function drawfloortile(fx, fy, fz, s)
   local points = {}
-  for i=1,4 do
-    local sx,sy = getScreenPos(px,py,fx+offsets[i][1],fy+offsets[i][2],dir,alt)
-    if not sx then return end
-    add(points,{sx,sy})
+  for i=1,7,2 do
+    local sx,sy = getscreenpos(fx+offsets[i],fy+offsets[i+1],cam_z-fz)
+    if (not sx) return
+    add(points,sx)
+    add(points,sy)
   end
 
-  quadfillfloor(
-    points[1][1],points[1][2],
-    points[2][1],points[2][2],
-    points[3][1],points[3][2],
-    points[4][1],points[4][2],
-    px,py,dir,alt)
-
-  --[[line(points[1][1],points[1][2],points[2][1],points[2][2],8)
-  line(points[2][1],points[2][2],points[3][1],points[3][2],8)
-  line(points[3][1],points[3][2],points[4][1],points[4][2],8)
-  line(points[4][1],points[4][2],points[1][1],points[1][2],8)]]
+  quadfillfloor(cam_z-fz,unpack(points))
 end
 
-function getFloorPos(px, py, sx, sy, dir, alt)
-  local floordist = antiFishEye[sx] * alt * projplanedist / sy
-  local raydir = dir + rayDir[sx]
-  return px + cos(raydir) * floordist, py + sin(raydir) * floordist
+function getfloorpos(sx, sy, wz)
+  local floordist = antiFishEye[sx] * wz * projplanedist / sy
+  local raydir = cam_dir + rayDir[sx]
+  return cam_x + cos(raydir) * floordist, cam_y + sin(raydir) * floordist
 end
 
-function drawFloor(px, py, dir, alt)
+function drawfloor(alt)
   for y=1,63 do
-    local lx,ly = getFloorPos(px,py,-64,y,dir,alt)
-    local rx,ry = getFloorPos(px,py,63,y,dir,alt)
+    local lx,ly = getfloorpos(-64,y,cam_z-alt)
+    local rx,ry = getfloorpos(63,y,cam_z-alt)
 
     tline(-64,y,63,y,lx,ly,(rx-lx)/128,(ry-ly)/128)
   end
@@ -307,12 +280,12 @@ end
 --  if d < 0.5 then return flr(val) else return flr(val+1) end
 --end
 
-function drawHorizon(px, py, dir, alt)
+function drawhorizon()
   for x=-64,63 do
-    local raydir = dir + rayDir[x]
+    local raydir = cam_dir + rayDir[x]
     local rx = cos(raydir)
     local ry = sin(raydir)
-    local cx,cy,d,mr = rayDDA(px, py, rx, ry, 8)
+    local cx,cy,d,mr = raydda(cam_x, cam_y, rx, ry, 8)
     if cx then
       local tx = abs(cx % 1)
       local ty = abs(cy % 1)
@@ -325,7 +298,7 @@ function drawHorizon(px, py, dir, alt)
 
       local m = mr[1]
       local depthfactor = antiFishEye[x] * projplanedist / d
-      local walltop = -(1-alt) * depthfactor
+      local walltop = -(1-cam_z) * depthfactor
       sspr((m%16 + c)*8,flr(m/16)*8,1,8,x,walltop+1,1,depthfactor + walltop%1)
 
       --local halfwall = flr(antiFishEye[x] * 0.5 * projplanedist / d)
@@ -334,8 +307,28 @@ function drawHorizon(px, py, dir, alt)
   end
 end
 
+---------- OTHER ----------
+function deductnormal(mt, cx, cy)
+  if mt.x1 then
+    return vec:new(mt.y1 - mt.y2, mt.x2-mt.x1):unit()
+  end
+  local x,y = cx % 1, cy % 1
+  if x < 0.0005 then
+    return vec:new(-1,0)
+  elseif x > 0.9995 then
+    return vec:new(1,0)
+  elseif y < 0.0005 then
+    return vec:new(0,-1)
+  else
+    return vec:new(0,1)
+  end
+end
+
+---------- DRAW/UPDATE ----------
+
 function _update()
   player:update()
+  player:copytocam()
 end
 
 modes = {top = 0, raycast=1, max=2}
@@ -365,7 +358,7 @@ function _draw()
     local ppx = player.pos.x
     local ppy = player.pos.y
     local unit = player:getunitdir()
-    local cx, cy, d, m = rayDDA(ppx, ppy, unit.x, unit.y, 16)
+    local cx, cy, d, m = raydda(ppx, ppy, unit.x, unit.y, 16)
 
     if d then
       line(ppx * 8, ppy * 8, cx * 8, cy * 8, 12)
@@ -378,16 +371,14 @@ function _draw()
     end
   elseif rendermode == modes.raycast then
     camera(-64,-64)
-    local px,py,pd = player.pos.x, player.pos.y, player.dir
-    local alt = player.alt --+ sin(t()*0.2)*0.3
-    drawFloor(px,py,pd, alt)
-    drawHorizon(px,py,pd, alt)
+    drawfloor(0)
+    drawhorizon()
 
-    --drawFloorTile(7,8,0,px,py,pd,alt + sin(t()) * 0.4)
-    --[[local x1,y1 = getScreenPos(px, py, 2, 2, pd, alt)
-    local x2,y2 = getScreenPos(px, py, 3, 2, pd, alt)
-    local x3,y3 = getScreenPos(px, py, 3, 3, pd, alt)
-    local x4,y4 = getScreenPos(px, py, 2, 3, pd, alt)
+    drawfloortile(9,25,sin(t()*0.25) * 0.4, 0)
+    --[[local x1,y1 = getscreenpos(px, py, 2, 2, pd, alt)
+    local x2,y2 = getscreenpos(px, py, 3, 2, pd, alt)
+    local x3,y3 = getscreenpos(px, py, 3, 3, pd, alt)
+    local x4,y4 = getscreenpos(px, py, 2, 3, pd, alt)
     if x1 and x2 and x3 and x4 then
       line(x1,y1,x2,y2,7)
       line(x2,y2,x3,y3,7)
