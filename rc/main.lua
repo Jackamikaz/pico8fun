@@ -179,7 +179,7 @@ end
 
 -- translate world position to screen coordinates
 function getscreenpos(mx,my,mz)
-  local dx, dy = mx - cam_x, my - cam_y
+  --[[local dx, dy = mx - cam_x, my - cam_y
   local d = sqrt(dx*dx+dy*dy)
   local raydir = atan2(dx,dy) - cam_dir
   local crd = cos(raydir)
@@ -195,61 +195,73 @@ function getscreenpos(mx,my,mz)
     end
   else
     return x,y
+  end--]]
+
+  mx,my = my-cam_y, mx-cam_x
+  mx,my = mx*cam_dircos - my*cam_dirsin, mx*cam_dirsin + my*cam_dircos
+  if my > 0.1 then
+    local df = projplanedist / my
+    return mx * df, mz * df
   end
 end
 
 -- adapted from @p01 trifill https://www.lexaloffle.com/bbs/?pid=azure_trifillr4-1
-function quadfillfloor(alt,x0,y0,x1,y1,x2,y2,x3,y3)
-  if (y0 > y1) x0,y0,x1,y1 = x1,y1,x0,y0
-  if (y2 > y3) x2,y2,x3,y3 = x3,y3,x2,y2
-  if (y0 > y2) x0,y0,x2,y2 = x2,y2,x0,y0
-  if (y1 > y3) x1,y1,x3,y3 = x3,y3,x1,y1
+function quadfillfloor(alt,x1,y1,x2,y2,x3,y3,x4,y4)
   if (y1 > y2) x1,y1,x2,y2 = x2,y2,x1,y1
+  if (y3 > y4) x3,y3,x4,y4 = x4,y4,x3,y3
+  if (y1 > y3) x1,y1,x3,y3 = x3,y3,x1,y1
+  if (y2 > y4) x2,y2,x4,y4 = x4,y4,x2,y2
+  if (y2 > y3) x2,y2,x3,y3 = x3,y3,x2,y2
 
   local s1,s2,s3--,s4
 
-  s1 = x0+(x3-x0)/(y3-y0)*(y1-y0)
-  --s2 = x0+(x3-x0)/(y3-y0)*(y2-y0)
-  s3 = x0+(x2-x0)/(y2-y0)*(y1-y0)
-  --s4 = x1+(x3-x1)/(y3-y1)*(y2-y1)
+  s1 = x1+(x4-x1)/(y4-y1)*(y2-y1)
+  s3 = x1+(x3-x1)/(y3-y1)*(y2-y1)
 
-  if abs(s1 - x1) < abs(s3- x1) then
+  if abs(s1 - x2) < abs(s3- x2) then
     s1 = s3
-    s2 = x1+(x3-x1)/(y3-y1)*(y2-y1) -- s4
+    s2 = x2+(x4-x2)/(y4-y2)*(y3-y2) -- s4
   else
-    s2 = x0+(x3-x0)/(y3-y0)*(y2-y0)
+    s2 = x1+(x4-x1)/(y4-y1)*(y3-y1)
   end
 
-  if (s1 < x1) x1, s1 = s1, x1
-  if (s2 < x2) x2, s2 = s2, x2
+  if (s1 < x2) x2, s1 = s1, x2
+  if (s2 < x3) x3, s2 = s2, x3
 
-  floortrapeze(x0,x0,x1,s1,y0,y1,alt)
-  floortrapeze(x1,s1,x2,s2,y1,y2,alt)
-  floortrapeze(x2,s2,x3,x3,y2,y3,alt)
+  floortrapeze(x1,x1,x2,s1,y1,y2,alt)
+  floortrapeze(x2,s1,x3,s2,y2,y3,alt)
+  floortrapeze(x3,s2,x4,x4,y3,y4,alt)
 end
-function floortrapeze(l,r,lt,rt,y0,y1,alt)
-  lt,rt=(lt-l)/(y1-y0),(rt-r)/(y1-y0)
-  --if(y0<0)l,r,y0=l-y0*lt,r-y0*rt,0
-  --y1=min(y1,128)
-  for y0=y0,y1 do
-    --rectfill(l,y0,r,y0)
+function floortrapeze(l,r,lt,rt,y1,y2,alt)
+  lt,rt=(lt-l)/(y2-y1),(rt-r)/(y2-y1)
+  --if(y1<0)l,r,y1=l-y1*lt,r-y1*rt,0
+  --y2=min(y2,128)
+  for y1=y1,min(64,y2) do
+    --rectfill(l,y1,r,y1)
     
-    local la,ra = min(max(-64,flr(l)), 63), min(max(-64,flr(r)), 63)
+    if r >= -64 and l < 64 then
+      local la,ra = min(max(-64,flr(l)), 63), min(max(-64,flr(r)), 63)
 
-    local lx,ly = getfloorpos(la,y0,alt)
-    local rx,ry = getfloorpos(ra,y0,alt)
+      local lx,ly = getfloorpos(la,y1,alt)
+      local rx,ry = getfloorpos(ra,y1,alt)
 
-    local sd = ra - la
-    tline(la,y0,ra,y0,lx,ly,(rx-lx)/sd,(ry-ly)/sd)
+      local sd = ra - la
+      tline(la,y1,ra,y1,lx,ly,(rx-lx)/sd,(ry-ly)/sd)
+    end
 
     l+=lt
     r+=rt
   end
 end
 
+function worldtocam(wx,wy)
+  wx,wy = wy-cam_y, wx-cam_x
+  return wx*cam_dircos - wy*cam_dirsin, wx*cam_dirsin + wy*cam_dircos
+end
+
 offsets = {0,0,1,0,1,1,0,1}
 function drawfloortile(fx, fy, fz, s)
-  local points = {}
+  --[[local points = {}
   for i=1,7,2 do
     local sx,sy = getscreenpos(fx+offsets[i],fy+offsets[i+1],cam_z-fz)
     if (not sx) return
@@ -257,11 +269,98 @@ function drawfloortile(fx, fy, fz, s)
     add(points,sy)
   end
 
-  quadfillfloor(cam_z-fz,unpack(points))
+  quadfillfloor(cam_z-fz,unpack(points))]]
+  local x1,y1 = worldtocam(fx,fy)
+  local x2,y2 = worldtocam(fx+1,fy)
+  local x3,y3 = worldtocam(fx+1,fy+1)
+  local x4,y4 = worldtocam(fx,fy+1)
+
+  if (y1 < y2) x1,y1,x2,y2 = x2,y2,x1,y1
+  if (y3 < y4) x3,y3,x4,y4 = x4,y4,x3,y3
+  if (y1 < y3) x1,y1,x3,y3 = x3,y3,x1,y1
+  if (y2 < y4) x2,y2,x4,y4 = x4,y4,x2,y2
+  if (y2 < y3) x2,y2,x3,y3 = x3,y3,x2,y2
+
+  local ylimit = 0.01
+
+  if (y1 < ylimit) return
+
+  local alt,tra = cam_z-fz,3
+  local x2b,x3b,x4b
+
+  if y2 < ylimit then
+    tra = 1
+    x2,y2 = x1+(x2-x1)/(y2-y1)*(ylimit-y1),ylimit
+  end
+
+  x2b = x1+(x4-x1)/(y4-y1)*(y2-y1)
+  x3b = x1+(x3-x1)/(y3-y1)*(y2-y1)
+
+  if abs(x2b - x2) < abs(x3b- x2) then
+    x2b = x3b
+    x3b = x2+(x4-x2)/(y4-y2)*(y3-y2)
+  else
+    x3b = x1+(x4-x1)/(y4-y1)*(y3-y1)
+  end
+
+  if (x2b < x2) x2, x2b = x2b, x2
+  if (x3b < x3) x3, x3b = x3b, x3
+
+  if tra > 1 then
+    if y3 < ylimit then
+      tra = 2
+      x3 = x2+(x3-x2)/(y3-y2)*(ylimit-y2)
+      x3b = x2b+(x3b-x2b)/(y3-y2)*(ylimit-y2)
+      y3 = ylimit
+    else
+      x4b = x4
+      if y4 < ylimit then
+        x4 = x4+(x4-x3)/(y3-y4)*(y4-ylimit)
+        x4b = x4b+(x4b-x3b)/(y3-y4)*(y4-ylimit)
+        y4 = ylimit
+      end
+    end
+  end
+  
+  --debug
+  local s = -30
+  line(-60,ylimit*s,60,ylimit*s,13)
+  line(x1*s,y1*s,x2*s,y2*s,7)
+  line(x1*s,y1*s,x2b*s,y2*s,7)
+  line(x2*s,y2*s,x2b*s,y2*s,7)
+
+  if tra >= 2 then
+    line(x2*s,y2*s,x3*s,y3*s,7)
+    line(x2b*s,y2*s,x3b*s,y3*s,7)
+    line(x3*s,y3*s,x3b*s,y3*s,7)
+  end
+
+  if tra >= 3 then
+    line(x3*s,y3*s,x4*s,y4*s,7)
+    line(x3b*s,y3*s,x4b*s,y4*s,7)
+    line(x4*s,y4*s,x4b*s,y4*s,7)
+  end--]]
+
+  local df = projplanedist / y1
+  x1,y1 = x1*df, alt*df
+
+  df = projplanedist / y2
+  x2,x2b,y2 = x2*df, x2b*df, alt*df
+  floortrapeze(x1,x1,x2,x2b,y1,y2,alt)
+
+  if (tra < 2) return
+  df = projplanedist / y3
+  x3,x3b,y3 = x3*df, x3b*df, alt*df
+  floortrapeze(x2,x2b,x3,x3b,y2,y3,alt)
+
+  if (tra < 3) return
+  df = projplanedist / y4
+  x4,x4b,y4 = x4*df, x4b*df, alt*df
+  floortrapeze(x3,x3b,x4,x4b,y3,y4,alt)
 end
 
-function getfloorpos(sx, sy, wz)
-  local floordist = antiFishEye[sx] * wz * projplanedist / sy
+function getfloorpos(sx, sy, cz)
+  local floordist = antiFishEye[sx] * cz * projplanedist / sy
   local raydir = cam_dir + rayDir[sx]
   return cam_x + cos(raydir) * floordist, cam_y + sin(raydir) * floordist
 end
@@ -374,7 +473,8 @@ function _draw()
     drawfloor(0)
     drawhorizon()
 
-    drawfloortile(9,25,sin(t()*0.25) * 0.4, 0)
+    local a = 0.4--sin(t()*0.25) * 0.4
+    drawfloortile(9,25,a, 0)
     --[[local x1,y1 = getscreenpos(px, py, 2, 2, pd, alt)
     local x2,y2 = getscreenpos(px, py, 3, 2, pd, alt)
     local x3,y3 = getscreenpos(px, py, 3, 3, pd, alt)
