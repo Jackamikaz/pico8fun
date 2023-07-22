@@ -378,17 +378,17 @@ function drawwall(x1, y1, z1, x2, y2, z2, sp)
   local ylimit = 0.1
   x1,y1 = worldtocam(x1,y1)
   x2,y2 = worldtocam(x2,y2)
-  local x1o,x2o,tp1,tp2 = x1,x2,1,0
+  local t1,t2 = 1,0
   if y1 < ylimit then
     if (y2 < ylimit) return
-    tp2 = (ylimit - y1)/(y2-y1)
-    x1 += (x2-x1)*tp2
+    t2 = (ylimit - y1)/(y2-y1)
+    x1 += (x2-x1)*t2
     y1 = ylimit
   elseif y2 < ylimit then
-    tp1 = (ylimit - y2)/(y1-y2)
-    x2 += (x1-x2)*tp1
+    t1 = (ylimit - y2)/(y1-y2)
+    x2 += (x1-x2)*t1
     y2 = ylimit
-    tp1 = 1-tp1
+    t1 = 1-t1
   end
   
   --[[local s = -20
@@ -400,12 +400,12 @@ function drawwall(x1, y1, z1, x2, y2, z2, sp)
   z1,z2 = cam_z-z1,cam_z-z2
   local w1 = 1 / y1
   local df = projplanedist / y1
-  x1,x1o,y1 = x1*df,x1o*df,z1*df
+  x1,y1 = x1*df,z1*df
   local y1b = z2*df
 
   local w2 = 1 / y2
   df = projplanedist / y2
-  x2,x2o,y2 = x2*df,x2o*df,z1*df
+  x2,y2 = x2*df,z1*df
   local y2b = z2 * df
 
   local dx = x2-x1
@@ -416,7 +416,7 @@ function drawwall(x1, y1, z1, x2, y2, z2, sp)
 
   for x=x1,x2,sdx do
     local t = (x2-x)/dx
-    local u = ((1-t)*tp1/w1+t*tp2/w2)/((1-t)/w1+t/w2)
+    local u = ((1-t)*t1/w1+t*t2/w2)/((1-t)/w1+t/w2)
     sspr((sp%16+u)*8,flr(sp/16)*8,1,8,x,y1,1,y1b-flr(y1))
     --line(x,y1,x,y1b)
 
