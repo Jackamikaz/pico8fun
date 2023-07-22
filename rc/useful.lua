@@ -19,17 +19,6 @@ function addandsqr(a,b)
 return sqr(a+b)
 end
 
---sign
-function sign(a)
-if a<0 then
-return -1
-elseif a>0 then
-return 1
-else
-return 0
-end
-end
-
 --new class function
 --adapted from http://lua-users.org/wiki/inheritancetutorial
 function newclass(inherits)

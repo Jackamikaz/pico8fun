@@ -259,7 +259,7 @@ function worldtocam(wx,wy)
   return wx*cam_dircos - wy*cam_dirsin, wx*cam_dirsin + wy*cam_dircos
 end
 
-offsets = {0,0,1,0,1,1,0,1}
+--offsets = {0,0,1,0,1,1,0,1}
 function drawfloortile(fx, fy, fz, s)
   --[[local points = {}
   for i=1,7,2 do
@@ -322,7 +322,7 @@ function drawfloortile(fx, fy, fz, s)
     end
   end
   
-  --debug
+  --[[debug
   local s = -30
   line(-60,ylimit*s,60,ylimit*s,13)
   line(x1*s,y1*s,x2*s,y2*s,7)
@@ -371,6 +371,57 @@ function drawfloor(alt)
     local rx,ry = getfloorpos(63,y,cam_z-alt)
 
     tline(-64,y,63,y,lx,ly,(rx-lx)/128,(ry-ly)/128)
+  end
+end
+
+function drawwall(x1, y1, z1, x2, y2, z2, sp)
+  local ylimit = 0.1
+  x1,y1 = worldtocam(x1,y1)
+  x2,y2 = worldtocam(x2,y2)
+  local x1o,x2o,tp1,tp2 = x1,x2,1,0
+  if y1 < ylimit then
+    if (y2 < ylimit) return
+    tp2 = (ylimit - y1)/(y2-y1)
+    x1 += (x2-x1)*tp2
+    y1 = ylimit
+  elseif y2 < ylimit then
+    tp1 = (ylimit - y2)/(y1-y2)
+    x2 += (x1-x2)*tp1
+    y2 = ylimit
+    tp1 = 1-tp1
+  end
+  
+  --[[local s = -20
+  line(-60,ylimit*s,60,ylimit*s,13)
+  line(x1*s,y1*s,x2*s,y2*s,7)
+  circ(x1*s,y1*s,2,8)
+  circ(x2*s,y2*s,2,11)--]]
+
+  z1,z2 = cam_z-z1,cam_z-z2
+  local w1 = 1 / y1
+  local df = projplanedist / y1
+  x1,x1o,y1 = x1*df,x1o*df,z1*df
+  local y1b = z2*df
+
+  local w2 = 1 / y2
+  df = projplanedist / y2
+  x2,x2o,y2 = x2*df,x2o*df,z1*df
+  local y2b = z2 * df
+
+  local dx = x2-x1
+  local sdx = sgn(dx)
+  local tt,bt = (y2-y1)/dx*sdx,(y2b-y1b)/dx*sdx
+
+  --printh("t1="..(x2-x1)/dx..", t2="..(x2-x2)/dx..", tp1="..tp1..", tp2="..tp2)
+
+  for x=x1,x2,sdx do
+    local t = (x2-x)/dx
+    local u = ((1-t)*tp1/w1+t*tp2/w2)/((1-t)/w1+t/w2)
+    sspr((sp%16+u)*8,flr(sp/16)*8,1,8,x,y1,1,y1b-flr(y1))
+    --line(x,y1,x,y1b)
+
+    y1 += tt
+    y1b += bt
   end
 end
 
@@ -475,6 +526,9 @@ function _draw()
 
     local a = 0.4--sin(t()*0.25) * 0.4
     drawfloortile(9,25,a, 0)
+
+    drawwall(2,22,1,4,23,0, 1)
+    drawwall(4,23,1,5,25,0, 17)
     --[[local x1,y1 = getscreenpos(px, py, 2, 2, pd, alt)
     local x2,y2 = getscreenpos(px, py, 3, 2, pd, alt)
     local x3,y3 = getscreenpos(px, py, 3, 3, pd, alt)
