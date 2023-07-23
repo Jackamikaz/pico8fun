@@ -1,18 +1,3 @@
-px, py = 63, 63
-
-dir = 0
-halffov = 0.125
-
-function farviewcoord(farplane)
-  local ld,rd = dir + halffov, dir - halffov
-  local lc,ls,rc,rs = cos(ld), sin(ld), cos(rd), sin(rd)
-  return
-    px + lc*farplane,  py + ls*farplane,
-    px + rc*farplane,  py + rs*farplane
-    --px + lc*nearplane, py + ls*nearplane,
-    --px + rc*nearplane, py + rs*nearplane
-end
-
 function bresenhamlog(x1, y1, x2, y2)
   local t = {}
   x1 = flr(x1)
@@ -28,7 +13,6 @@ function bresenhamlog(x1, y1, x2, y2)
   local err = dx+dy
 
   while true do
-    --pset(x1,y1)
     add(t,x1)
     add(t,y1)
     if x1==x2 and y1 == y2 then return t end
@@ -44,60 +28,7 @@ function bresenhamlog(x1, y1, x2, y2)
   end
 end
 
-function floatline(x,y,x2,y2)
-  local dx, dy = x2-x, y2-y
-  if abs(dx) >= abs(dy) then
-    local s = sgn(dx)
-    local r = dy/dx*s
-    while (x2 - x)*s > 0 do
-      pset(x,y)
-      x += s
-      y += r
-    end
-  else
-    local s = sgn(dy)
-    local r = dx/dy*s
-    while (y2 - y)*s > 0 do
-      pset(x,y)
-      x += r
-      y += s
-    end
-  end
-end
-
-function btnn(b)
-  return btn(b) and 1 or 0
-end
-
-function _update()
-  dir += (btnn(⬅️) - btnn(➡️)) * 0.0125
-end
-
-function _draw()
-  cls()
-  x1,y1,x2,y2 = farviewcoord(50)
-
-  color(7)
-  bresenham(x1,y1,x2,y2)
-  bresenham(x1,y1,px,py)
-  bresenham(x2,y2,px,py)
-
-  --[[local ltop,rtop = {}, {}
-  bresenhamlog(ltop,x1,y1,px,py)
-  bresenhamlog(rtop,x2,y2,px,py)
-
-  local col = 1
-  for i=0,min(#ltop,#rtop) * 0.5 - 2 do
-    color(col+1)
-    local ix,iy = i*2+1, i*2+2
-    bresenham(ltop[ix],ltop[iy],rtop[ix],rtop[iy])
-    col = (col+1) % 15
-  end
-
-  -----------------]]
-
-  local col = 1
-
+function bresescan(func,px,py,x1,y1,x2,y2)
   local l = bresenhamlog(x1,y1,x2,y2)
   local tx,ty = py - y2, x2 - px
   local tx2,ty2 = py - y1, x1 - px
@@ -115,14 +46,12 @@ function _draw()
   local ix,iy = 0,0
   local mj = 1
   for i=1,fc do
-    color(col+1)
-
     for j=mj,#l,2 do
       local x,y = ix+l[j],iy+l[j+1]
       local vx, vy = x - px, y - py
       if vx*tx + vy*ty > 0 then break end
       if vx*tx2 + vy*ty2 > 0 then
-        pset(x,y)
+        func(x,y,i)
       else
         mj = j
       end
@@ -130,7 +59,5 @@ function _draw()
 
     ix += sx
     iy += sy
-
-    col = (col+1) % 15
   end
 end

@@ -1,6 +1,6 @@
 ---------- PLAYER ----------
 player = {}
-player.pos = vec:new(4.5, 23.5)
+player.pos = vec:new(9.5, 8.5)
 player.alt = 0.5
 player.size = 2.5
 player.dir = 0.75
@@ -47,14 +47,16 @@ end
 
 function _init()
   setupcamera()
-  setfov(0.3)
+  setfov(0.2222)
   buildluamap()
+  poke(0x5f2d, 1) --enable mouse
 end
 
-function setupcamera(startx, starty, startz, startdir)
-  cam_x = startx or 0
-  cam_y = starty or 0
-  cam_z = startz or 0.5
+function setupcamera(startx, starty, startz, startdir, startfar)
+  cam_x = startx
+  cam_y = starty
+  cam_z = startz
+  cam_far = startfar or 8
   setcamdir(startdir)
 end
 
@@ -65,12 +67,25 @@ function setcamdir(newdir)
 end
 
 function setfov(fov)
-  projplanedist = -128 * cos(fov/2) / sin(fov/2) --screen width / tan(fov/2)
+  cam_halffov = fov/2
+  projplanedist = -64 * cos(cam_halffov) / sin(cam_halffov) --half screen width / tan(fov/2)
   rayDir = {}
   antiFishEye = {}
   for x=-64,63 do
     rayDir[x] = atan2(projplanedist, x)
     antiFishEye[x] = 1 / cos(rayDir[x])
+  end
+end
+
+function getfarsegment()
+  local la,ra = cam_dir+cam_halffov,cam_dir-cam_halffov
+  local d = cam_far/cos(cam_halffov)
+  return cam_x + cos(la)*d, cam_y + sin(la)*d, cam_x + cos(ra)*d, cam_y + sin(ra)*d
+end
+
+function append(t,...)
+  for _,v in ipairs({...}) do
+    add(t,v)
   end
 end
 
@@ -81,7 +96,7 @@ function buildluamap()
     for x = 0,127 do
       local m = mget(x,y)
       if fget(m, 0) then
-        local cell = {m}
+        --[[local cell = {m}
         if m == 3 then
           cell[1] = 1
           cell.x1 = x
@@ -94,14 +109,35 @@ function buildluamap()
           cell.y1 = y
           cell.x2 = x
           cell.y2 = y + 1
+        end--]]
+        local walls = {}
+        if not fget(mget(x-1,y),0) then
+          append(walls,x,y+1,0,x,y,1,m)
         end
-        luamap[x | y << 8] = cell
+        if not fget(mget(x+1,y),0) then
+          append(walls,x+1,y,0,x+1,y+1,1,m)
+        end
+        if not fget(mget(x,y-1),0) then
+          append(walls,x,y,0,x+1,y,1,m)
+        end
+        if not fget(mget(x,y+1),0) then
+          append(walls,x+1,y+1,0,x,y+1,1,m)
+        end
+        luamap[x | y << 8] = {m,walls}
       end
     end
   end
 end
 
 ---------- COLLISIONS ----------
+
+--https://stackoverflow.com/questions/2049582/how-to-determine-if-a-point-is-in-a-2d-triangle
+function pointintriangle(px,py,x1,y1,x2,y2,x3,y3)
+  local s1 = (px-x2)*(y1-y2)-(x1-x2)*(py-y2) < 0
+  local s2 = (px-x3)*(y2-y3)-(x2-x3)*(py-y3) < 0
+  local s3 = (px-x1)*(y3-y1)-(x3-x1)*(py-y1) < 0
+  return s1 == s2 and s2 == s3
+end
 
 --https://iq.opengenus.org/2d-line-intersection/#:~:text=Step%201%20%3A%20Input%20four%20coordinates,of%20slope%20of%20each%20line.
 function lineintersection(x1, y1, x2, y2, x3, y3, x4, y4)
@@ -435,7 +471,7 @@ function drawhorizon()
     local raydir = cam_dir + rayDir[x]
     local rx = cos(raydir)
     local ry = sin(raydir)
-    local cx,cy,d,mr = raydda(cam_x, cam_y, rx, ry, 8)
+    local cx,cy,d,mr = raydda(cam_x, cam_y, rx, ry, cam_far)
     if cx then
       local tx = abs(cx % 1)
       local ty = abs(cy % 1)
@@ -474,6 +510,30 @@ function deductnormal(mt, cx, cy)
   end
 end
 
+function bssfunc(x,y)
+  local lm = luamap[x | y << 8]
+  if lm then
+    local w = lm[2]
+    for i=1,#w,7 do
+      drawwall(unpack(w,i,i+6))
+    end
+  elseif mget(x,y) ~= 0 then
+    drawfloortile(x,y,0,0)
+  end
+end
+
+--flatbsscount = 0
+--stepbystep = false
+function flatbss(x,y)
+  map(x,y,x*8,y*8,1,1)
+
+  --x,y = x*8,y*8
+  --rectfill(x,y,x+8,y+8,7)
+  --rect(x,y,x+8,y+8,0)
+  --print(flatbsscount,x+1,y+2,1)
+  --flatbsscount += 1
+end
+
 ---------- DRAW/UPDATE ----------
 
 function _update()
@@ -481,14 +541,9 @@ function _update()
   player:copytocam()
 end
 
-modes = {top = 0, raycast=1, max=2}
+modes = {top = 0, raycast=1, newtech=2, max=3}
 
 rendermode = modes.raycast
-
-ltx1 = 2
-lty1 = 2
-ltx2 = 6
-lty2 = 9
 
 function _draw()
   cls()
@@ -497,22 +552,45 @@ function _draw()
     rendermode = (rendermode + 1) % modes.max
   end
 
+  local rcx,rcy = cam_x,cam_y --cam_x-cam_dircos*2,cam_y-cam_dirsin*2
   if rendermode == modes.top then
     local cx = player.pos.x - 8
     local cy = player.pos.y - 8
     camera(cx * 8, cy * 8)
 
-    map(cx, cy, flr(cx) * 8, flr(cy) * 8, 17, 17)
+    --map(cx, cy, flr(cx) * 8, flr(cy) * 8, 17, 17)
+    --bresescan(flatbss,rcx,rcy,getfarsegment())
+    --parascan(flatbss,rcx,rcy,getfarsegment())
+    
+    --flatbsscount = 0
+    --stepbystep = false
+    disperscan(flatbss)
     player:draw()
 
-    local ppx = player.pos.x
+    --[[local ppx = player.pos.x
     local ppy = player.pos.y
     local unit = player:getunitdir()
     local cx, cy, d, m = raydda(ppx, ppy, unit.x, unit.y, 16)
 
     if d then
       line(ppx * 8, ppy * 8, cx * 8, cy * 8, 12)
-    end
+    end--]]
+
+    local px,py = rcx*8,rcy*8
+    local xl,yl,xr,yr = getfarsegment()
+    xl*=8
+    yl*=8
+    xr*=8
+    yr*=8
+
+    color(7)
+    line(xl,yl,xr,yr)
+    line(px,py,xl,yl)
+    line(px,py,xr,yr)
+
+    local mx, my = stat(32)+cx*8, stat(33)+cy*8
+    spr(32,mx,my)
+    print(pointintriangle(mx,my,px,py,xl,yl,xr,yr),mx+6,my+2,7)
 
     if m then
       m = m[1]
@@ -524,11 +602,11 @@ function _draw()
     drawfloor(0)
     drawhorizon()
 
-    local a = 0.4--sin(t()*0.25) * 0.4
-    drawfloortile(9,25,a, 0)
+    --local a = 0.4--sin(t()*0.25) * 0.4
+    --drawfloortile(9,25,a, 0)
 
-    drawwall(2,22,1,4,23,0, 1)
-    drawwall(4,23,1,5,25,0, 17)
+    --drawwall(2,22,1,4,23,0, 1)
+    --drawwall(4,23,1,5,25,0, 17)
     --[[local x1,y1 = getscreenpos(px, py, 2, 2, pd, alt)
     local x2,y2 = getscreenpos(px, py, 3, 2, pd, alt)
     local x3,y3 = getscreenpos(px, py, 3, 3, pd, alt)
@@ -539,6 +617,11 @@ function _draw()
       line(x3,y3,x4,y4,7)
       line(x4,y4,x1,y1,7)
     end]]
+  elseif rendermode == modes.newtech then
+    camera(-64,-64)
+    --parascan(bssfunc,rcx,rcy,getfarsegment())
+    --drawfloor(0)
+    disperscan(bssfunc)
   end
 
   --[[camera(0,0)
