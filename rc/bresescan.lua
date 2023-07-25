@@ -214,15 +214,6 @@ function middle(x,y)
   return flr(x)+0.5,flr(y)+0.5
 end
 
-function printv(s,...)
-  local v = {...}
-  local r = ""
-  for i,n in ipairs(split(s)) do
-    r = r..n.."="..v[i].." "
-  end
-  printh(r)
-end
-
 function sgn0(v)
   if (v==0) return 0
   return sgn(v)

@@ -45,6 +45,26 @@ end
 
 ---------- INIT ----------
 
+fadepal = {
+split("[0]=0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15"),
+split("[0]=0,0,1,1,2,1,13,6,4,4,9,3,13,1,13"),
+split("[0]=14,0,0,0,0,1,0,1,13,2,2,4,1,1,0,1,13"),
+split("[0]=0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0")
+}
+
+-- sets a darkened palette depending on distance
+function pald(d)
+  if d > 8 then
+    pal(fadepal[4])
+  elseif d > 7 then
+    pal(fadepal[3])
+  elseif d > 5 then
+    pal(fadepal[2])
+  else
+    pal()
+  end
+end
+
 function _init()
   setupcamera()
   setfov(0.2222)
@@ -83,12 +103,6 @@ function getfarsegment()
   return cam_x + cos(la)*d, cam_y + sin(la)*d, cam_x + cos(ra)*d, cam_y + sin(ra)*d
 end
 
-function append(t,...)
-  for _,v in ipairs({...}) do
-    add(t,v)
-  end
-end
-
 function buildluamap()
   luamap = {}
 
@@ -112,16 +126,16 @@ function buildluamap()
         end--]]
         local walls = {}
         if not fget(mget(x-1,y),0) then
-          append(walls,x,y+1,0,x,y,1,m)
+          append(walls,x,y,0,x,y+1,1,m)
         end
         if not fget(mget(x+1,y),0) then
-          append(walls,x+1,y,0,x+1,y+1,1,m)
+          append(walls,x+1,y+1,0,x+1,y,1,m)
         end
         if not fget(mget(x,y-1),0) then
-          append(walls,x,y,0,x+1,y,1,m)
+          append(walls,x+1,y,0,x,y,1,m)
         end
         if not fget(mget(x,y+1),0) then
-          append(walls,x+1,y+1,0,x,y+1,1,m)
+          append(walls,x,y+1,0,x+1,y+1,1,m)
         end
         luamap[x | y << 8] = {m,walls}
       end
@@ -276,12 +290,13 @@ function floortrapeze(l,r,lt,rt,y1,y2,alt)
     --rectfill(l,y1,r,y1)
     
     if r >= -64 and l < 64 then
-      local la,ra = min(max(-64,flr(l)), 63), min(max(-64,flr(r)), 63)
+      local la,ra = mid(-64,flr(l), 63), mid(-64,flr(r), 63)
 
-      local lx,ly = getfloorpos(la,y1,alt)
+      local lx,ly,fd = getfloorpos(la,y1,alt)
       local rx,ry = getfloorpos(ra,y1,alt)
 
       local sd = ra - la
+      pald(fd)
       tline(la,y1,ra,y1,lx,ly,(rx-lx)/sd,(ry-ly)/sd)
     end
 
@@ -398,22 +413,26 @@ end
 function getfloorpos(sx, sy, cz)
   local floordist = antiFishEye[sx] * cz * projplanedist / sy
   local raydir = cam_dir + rayDir[sx]
-  return cam_x + cos(raydir) * floordist, cam_y + sin(raydir) * floordist
+  return cam_x + cos(raydir) * floordist, cam_y + sin(raydir) * floordist, floordist*cos(rayDir[sx])
 end
 
 function drawfloor(alt)
   for y=1,63 do
-    local lx,ly = getfloorpos(-64,y,cam_z-alt)
+    local lx,ly,fd = getfloorpos(-64,y,cam_z-alt)
     local rx,ry = getfloorpos(63,y,cam_z-alt)
 
+    pald(fd)
     tline(-64,y,63,y,lx,ly,(rx-lx)/128,(ry-ly)/128)
   end
 end
 
 function drawwall(x1, y1, z1, x2, y2, z2, sp)
+  -- cut the line to stay in front of the camera
   local ylimit = 0.1
-  x1,y1 = worldtocam(x1,y1)
-  x2,y2 = worldtocam(x2,y2)
+  --pretransformed by the caller now
+  --x1,y1 = worldtocam(x1,y1)
+  --x2,y2 = worldtocam(x2,y2)
+  z1,z2 = cam_z-z1,cam_z-z2
   local t1,t2 = 1,0
   if y1 < ylimit then
     if (y2 < ylimit) return
@@ -426,14 +445,10 @@ function drawwall(x1, y1, z1, x2, y2, z2, sp)
     y2 = ylimit
     t1 = 1-t1
   end
-  
-  --[[local s = -20
-  line(-60,ylimit*s,60,ylimit*s,13)
-  line(x1*s,y1*s,x2*s,y2*s,7)
-  circ(x1*s,y1*s,2,8)
-  circ(x2*s,y2*s,2,11)--]]
 
-  z1,z2 = cam_z-z1,cam_z-z2
+  -- transform coordinates for depth
+  local d1,d2 = y1,y2
+
   local w1 = 1 / y1
   local df = projplanedist / y1
   x1,y1 = x1*df,z1*df
@@ -444,20 +459,37 @@ function drawwall(x1, y1, z1, x2, y2, z2, sp)
   x2,y2 = x2*df,z1*df
   local y2b = z2 * df
 
+  -- making sure we draw from left to right
+  if (x1 > x2) x1,y1,y1b,w1,x2,y2,y2b,w2 = x2,y2,y2b,w2,x1,y1,y1b,w1
+
+  -- calculate slopes
   local dx = x2-x1
-  local sdx = sgn(dx)
-  local tt,bt = (y2-y1)/dx*sdx,(y2b-y1b)/dx*sdx
+  local tt,bt,dt = (y2-y1)/dx,(y2b-y1b)/dx,(d2-d1)/dx
 
-  --printh("t1="..(x2-x1)/dx..", t2="..(x2-x2)/dx..", tp1="..tp1..", tp2="..tp2)
+  -- confine to the screen edges
+  if (x2 < -64 or x1 > 64) return
+  if x1 < -64 then
+    local d = -64-x1
+    --printh(d) stop()
+    y1 += tt*d
+    y1b += bt*d
+    d1 += dt*d
+    x1 = -64
+  end
+  local x2b = x2
+  if (x2b > 64) x2b = 64
 
-  for x=x1,x2,sdx do
+  -- draw!
+  for x=x1,x2b do
     local t = (x2-x)/dx
     local u = ((1-t)*t1/w1+t*t2/w2)/((1-t)/w1+t/w2)
+    pald(d1)
     sspr((sp%16+u)*8,flr(sp/16)*8,1,8,x,y1b,1,y1-flr(y1b))
     --line(x,y1,x,y1b)
 
     y1 += tt
     y1b += bt
+    d1 += dt
   end
 end
 
@@ -514,8 +546,19 @@ function bssfunc(x,y)
   local lm = luamap[x | y << 8]
   if lm then
     local w = lm[2]
+    local ord = {}
     for i=1,#w,7 do
-      drawwall(unpack(w,i,i+6))
+      local x1,y1,z1,x2,y2,z2,m = unpack(w,i,i+6)
+      x1,y1 = worldtocam(x1,y1)
+      x2,y2 = worldtocam(x2,y2)
+      local d = y1+y2--no need to divide by 2, the comparison is still correct
+      addordered(ord,{d,x1,y1,z1,x2,y2,z2,m},
+        function(a,b)
+          return a[1] > b[1]
+        end)
+    end
+    for _,w in ipairs(ord) do
+      drawwall(unpack(w,2,8))
     end
   elseif mget(x,y) ~= 0 then
     drawfloortile(x,y,0,0)
@@ -543,7 +586,8 @@ end
 
 modes = {top = 0, raycast=1, newtech=2, max=3}
 
-rendermode = modes.raycast
+rendermode = modes.newtech
+pallvl = 0
 
 function _draw()
   cls()
@@ -593,6 +637,9 @@ function _draw()
     drawfloor(0)
     drawhorizon()
 
+    local mx, my = stat(32)-64, stat(33)-64
+    spr(32,mx,my)
+
     --local a = 0.4--sin(t()*0.25) * 0.4
     --drawfloortile(9,25,a, 0)
 
@@ -610,8 +657,8 @@ function _draw()
     end]]
   elseif rendermode == modes.newtech then
     camera(-64,-64)
-    --parascan(bssfunc,rcx,rcy,getfarsegment())
-    --drawfloor(0)
+
+    cam_z = 1+sin(t()/3)*0.5
     disperscan(bssfunc)
   end
 
