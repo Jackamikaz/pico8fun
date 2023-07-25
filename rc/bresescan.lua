@@ -209,15 +209,8 @@ function expandtriangle(d,x1,y1,x2,y2,x3,y3)
   return npx,npy,nlx,nly,nrx,nry
 end
 
-_dxdy = {
-  {-1, 0},
-  { 0, 1},
-  { 1, 0},
-  { 0,-1},
-}
-
+--saves token when using this at least 3 times
 function middle(x,y)
-  assert(x ~= nil)
   return flr(x)+0.5,flr(y)+0.5
 end
 
@@ -231,7 +224,8 @@ function printv(s,...)
 end
 
 function sgn0(v)
-  if v==0 then return 0 else return sgn(v) end
+  if (v==0) return 0
+  return sgn(v)
 end
 
 function sqrdst(x1,y1,x2,y2)
@@ -243,19 +237,23 @@ function sqrdst(x1,y1,x2,y2)
 end
 
 function disperscan(func)
-  local dx,dy = unpack(_dxdy[flr((cam_dir+1/8)%1*4)+1])
+  local dx,dy = -sgn(cam_dircos),-sgn(cam_dirsin)
+  if abs(cam_dircos) > abs(cam_dirsin) then
+    dy = 0 else dx = 0 end
   local pdx,pdy = -dy,dx
   local px,py,lx,ly,rx,ry = expandtriangle(0.71,cam_x,cam_y,getfarsegment())
   local lsd = sqrdst(px,py,lx,ly)
   local ex,ey = middle(cam_x,cam_y)
   local sx,sy = middle(lineintersection(ex,ey,ex+dx,ey+dy,lx,ly,rx,ry))
-  for i=1,abs((sx-ex)*dx)+abs((sy-ey)*dy)+1 do
-    local fsx,fsy = lineintersection(sx,sy,sx+pdx,sy+pdy,lx,ly,rx,ry)
+  --for i=1,abs((sx-ex)*dx)+abs((sy-ey)*dy)+1 do
+  for i=1,sqrt(sqrdst(sx,sy,ex,ey))+1 do
+    local pl = {sx,sy,sx+pdx,sy+pdy}
+    local fsx,fsy = lineintersection(lx,ly,rx,ry,unpack(pl))
     local skip = sqrdst(sx,sy,fsx,fsy) > lsd
 
     local li = {
-      {lineintersection(sx,sy,sx+pdx,sy+pdy,px,py,rx,ry)},
-      {lineintersection(sx,sy,sx+pdx,sy+pdy,px,py,lx,ly)}}
+      {lineintersection(px,py,rx,ry,unpack(pl))},
+      {lineintersection(px,py,lx,ly,unpack(pl))}}
 
     for i=1,2 do
       local msx,msy = unpack(li[i])
@@ -277,6 +275,4 @@ function disperscan(func)
     func(flr(sx),flr(sy))
     sx += dx sy += dy
   end
-
-  return {px,py,lx,ly,rx,ry}
 end
