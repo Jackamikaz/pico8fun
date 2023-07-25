@@ -27,13 +27,18 @@ function player:update()
   self.dir += (btnn(⬅️) - btnn(➡️)) * self.turnrate
   local mov = self:getunitdir() * self.speed * (btnn(⬆️) - btnn(⬇️))
 
+  local function wallat(x,y)
+    local lm = luamap[x | y << 8]
+    return lm and lm.walls ~= nil
+  end
+
   local my = flr(self.pos.y)
   local nx = flr(self.pos.x + sgn(mov.x)*self.radius)
-  if (not luamap[nx | my << 8]) self.pos.x += mov.x
+  if (not wallat(nx,my)) self.pos.x += mov.x
 
   local mx = flr(self.pos.x)
   local ny = flr(self.pos.y + sgn(mov.y)*self.radius)
-  if (not luamap[mx | ny << 8]) self.pos.y += mov.y
+  if (not wallat(mx,ny)) self.pos.y += mov.y
 end
 
 function player:copytocam()
@@ -124,22 +129,48 @@ function buildluamap()
           cell.x2 = x
           cell.y2 = y + 1
         end--]]
-        local walls = {}
+        local w = {}
         if not fget(mget(x-1,y),0) then
-          append(walls,x,y,0,x,y+1,1,m)
+          append(w,x,y,0,x,y+1,1,m)
         end
         if not fget(mget(x+1,y),0) then
-          append(walls,x+1,y+1,0,x+1,y,1,m)
+          append(w,x+1,y+1,0,x+1,y,1,m)
         end
         if not fget(mget(x,y-1),0) then
-          append(walls,x+1,y,0,x,y,1,m)
+          append(w,x+1,y,0,x,y,1,m)
         end
         if not fget(mget(x,y+1),0) then
-          append(walls,x,y+1,0,x+1,y+1,1,m)
+          append(w,x,y+1,0,x+1,y+1,1,m)
         end
-        luamap[x | y << 8] = {m,walls}
+        luamap[x | y << 8] = {walls=w}
+      elseif m~=0 then
+        luamap[x | y << 8] = {floors={m,0}}
       end
     end
+  end
+
+  -- rework floor sprites for their tline'ing
+  poke(0x5f55,0x00)
+  for i=1,127 do
+    if fget(i) == 0 then
+      rectfill(0,0,7,7,0)
+      spr(i,0,0)
+      local x,y = i*8%128,flr(i/16)*8
+      sspr(4,4,4,4,x  ,y  )
+      sspr(0,4,4,4,x+4,y  )
+      sspr(0,0,4,4,x+4,y+4)
+      sspr(4,0,4,4,x  ,y+4)
+    end
+  end
+  poke(0x5f55,0x60)
+
+  -- set the map for "tline'ing the sprite sheet"
+  for i=0,127 do
+    local x,y = i*2%128,flr(i/64)*2
+    mset(x,y,i)
+    mset(x+1,y,i)
+    mset(x,y+1,i)
+    mset(x+1,y+1,i)
   end
 end
 
@@ -218,7 +249,7 @@ function raydda(px, py, rx, ry, md)
           local dx, dy = cx-px, cy-py
           return cx, cy, sqrt(dx*dx+dy*dy), m
         end
-      else
+      elseif m.walls then
         return px + rx * d, py + ry * d, d, m
       end
     end
@@ -256,7 +287,7 @@ function getscreenpos(mx,my,mz)
 end
 
 -- adapted from @p01 trifill https://www.lexaloffle.com/bbs/?pid=azure_trifillr4-1
-function quadfillfloor(alt,x1,y1,x2,y2,x3,y3,x4,y4)
+--[[function quadfillfloor(alt,x1,y1,x2,y2,x3,y3,x4,y4)
   if (y1 > y2) x1,y1,x2,y2 = x2,y2,x1,y1
   if (y3 > y4) x3,y3,x4,y4 = x4,y4,x3,y3
   if (y1 > y3) x1,y1,x3,y3 = x3,y3,x1,y1
@@ -281,29 +312,7 @@ function quadfillfloor(alt,x1,y1,x2,y2,x3,y3,x4,y4)
   floortrapeze(x1,x1,x2,s1,y1,y2,alt)
   floortrapeze(x2,s1,x3,s2,y2,y3,alt)
   floortrapeze(x3,s2,x4,x4,y3,y4,alt)
-end
-function floortrapeze(l,r,lt,rt,y1,y2,alt)
-  lt,rt=(lt-l)/(y2-y1),(rt-r)/(y2-y1)
-  --if(y1<0)l,r,y1=l-y1*lt,r-y1*rt,0
-  --y2=min(y2,128)
-  for y1=y1,min(64,y2) do
-    --rectfill(l,y1,r,y1)
-    
-    if r >= -64 and l < 64 then
-      local la,ra = mid(-64,flr(l), 63), mid(-64,flr(r), 63)
-
-      local lx,ly,fd = getfloorpos(la,y1,alt)
-      local rx,ry = getfloorpos(ra,y1,alt)
-
-      local sd = ra - la
-      pald(fd)
-      tline(la,y1,ra,y1,lx,ly,(rx-lx)/sd,(ry-ly)/sd)
-    end
-
-    l+=lt
-    r+=rt
-  end
-end
+end]]
 
 function worldtocam(wx,wy)
   wx,wy = wy-cam_y, wx-cam_x
@@ -312,6 +321,7 @@ end
 
 --offsets = {0,0,1,0,1,1,0,1}
 function drawfloortile(fx, fy, fz, s)
+  local ox,oy = fx-s*2-0.5,fy-0.5
   --[[local points = {}
   for i=1,7,2 do
     local sx,sy = getscreenpos(fx+offsets[i],fy+offsets[i+1],cam_z-fz)
@@ -397,17 +407,42 @@ function drawfloortile(fx, fy, fz, s)
 
   df = projplanedist / y2
   x2,x2b,y2 = x2*df, x2b*df, alt*df
-  floortrapeze(x1,x1,x2,x2b,y1,y2,alt)
+  floortrapeze(x1,x1,x2,x2b,y1,y2,alt,ox,oy)
 
   if (tra < 2) return
   df = projplanedist / y3
   x3,x3b,y3 = x3*df, x3b*df, alt*df
-  floortrapeze(x2,x2b,x3,x3b,y2,y3,alt)
+  floortrapeze(x2,x2b,x3,x3b,y2,y3,alt,ox,oy)
 
   if (tra < 3) return
   df = projplanedist / y4
   x4,x4b,y4 = x4*df, x4b*df, alt*df
-  floortrapeze(x3,x3b,x4,x4b,y3,y4,alt)
+  floortrapeze(x3,x3b,x4,x4b,y3,y4,alt,ox,oy)
+end
+
+function floortrapeze(l,r,lt,rt,y1,y2,alt,ox,oy)
+  lt,rt=(lt-l)/(y2-y1),(rt-r)/(y2-y1)
+  --if(y1<0)l,r,y1=l-y1*lt,r-y1*rt,0
+  --y2=min(y2,128)
+  for y1=y1,min(64,y2) do
+    --rectfill(l,y1,r,y1)
+    
+    if r >= -64 and l < 64 then
+      local la,ra = mid(-64,flr(l), 63), mid(-64,flr(r), 63)
+
+      local lx,ly,fd = getfloorpos(la,y1,alt)
+      local rx,ry = getfloorpos(ra,y1,alt)
+
+      local sd = ra-la
+      pald(fd)
+      tline(la,y1,ra,y1,lx-ox,ly-oy,(rx-lx)/sd,(ry-ly)/sd)
+
+      --pset(la,y1,7) pset(ra,y1,8)
+    end
+
+    l+=lt
+    r+=rt
+  end
 end
 
 function getfloorpos(sx, sy, cz)
@@ -514,7 +549,7 @@ function drawhorizon()
         c = ty
       end
 
-      local m = mr[1]
+      local m = mr.walls[7] or 1
       local depthfactor = antiFishEye[x] * projplanedist / d
       local walltop = -(1-cam_z) * depthfactor
       sspr((m%16 + c)*8,flr(m/16)*8,1,8,x,walltop+1,1,depthfactor + walltop%1)
@@ -545,36 +580,42 @@ end
 function bssfunc(x,y)
   local lm = luamap[x | y << 8]
   if lm then
-    local w = lm[2]
-    local ord = {}
-    for i=1,#w,7 do
-      local x1,y1,z1,x2,y2,z2,m = unpack(w,i,i+6)
-      x1,y1 = worldtocam(x1,y1)
-      x2,y2 = worldtocam(x2,y2)
-      local d = y1+y2--no need to divide by 2, the comparison is still correct
-      addordered(ord,{d,x1,y1,z1,x2,y2,z2,m},
-        function(a,b)
-          return a[1] > b[1]
-        end)
+    local w = lm.walls
+    local f = lm.floors
+    if w then
+      local ord = {}
+      for i=1,#w,7 do
+        local x1,y1,z1,x2,y2,z2,m = unpack(w,i,i+6)
+        x1,y1 = worldtocam(x1,y1)
+        x2,y2 = worldtocam(x2,y2)
+        local d = y1+y2--no need to divide by 2, the comparison is still correct
+        addordered(ord,{d,x1,y1,z1,x2,y2,z2,m},
+          function(a,b)
+            return a[1] > b[1]
+          end)
+      end
+      for _,w in ipairs(ord) do
+        drawwall(unpack(w,2,8))
+      end
     end
-    for _,w in ipairs(ord) do
-      drawwall(unpack(w,2,8))
+    if f then
+      drawfloortile(x,y,0,f[1])
     end
-  elseif mget(x,y) ~= 0 then
-    drawfloortile(x,y,0,0)
+  --elseif mget(x,y) ~= 0 then
+  --  drawfloortile(x,y,0,0)
   end
 end
 
 flatbsscount = 0
 stepbystep = false
 function flatbss(x,y)
-  --map(x,y,x*8,y*8,1,1)
+  map(x,y,x*8,y*8,1,1)
 
-  x,y = x*8,y*8
-  rectfill(x,y,x+8,y+8,7)
-  rect(x,y,x+8,y+8,0)
-  print(flatbsscount,x+1,y+2,1)
-  flatbsscount += 1
+  --x,y = x*8,y*8
+  --rectfill(x,y,x+8,y+8,7)
+  --rect(x,y,x+8,y+8,0)
+  --print(flatbsscount,x+1,y+2,1)
+  --flatbsscount += 1
 end
 
 ---------- DRAW/UPDATE ----------
@@ -658,7 +699,7 @@ function _draw()
   elseif rendermode == modes.newtech then
     camera(-64,-64)
 
-    cam_z = 1+sin(t()/3)*0.5
+    cam_z = 0.5--1+sin(t()/3)*0.5
     disperscan(bssfunc)
   end
 
