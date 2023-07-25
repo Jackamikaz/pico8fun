@@ -146,11 +146,11 @@ function lineintersection(x1, y1, x2, y2, x3, y3, x4, y4)
   local y12 = y1 - y2
   local y34 = y3 - y4
   local c = x12 * y34 - y12 * x34
-  if (c~=0) then
+  --if (c~=0) then
     local a = x1 * y2 - y1 * x2
     local b = x3 * y4 - y3 * x4
     return (a * x34 - b * x12 ) / c, (a * y34 - b * y12) / c
-  end
+  --end
 end
 
 function raydda(px, py, rx, ry, md)
@@ -453,7 +453,7 @@ function drawwall(x1, y1, z1, x2, y2, z2, sp)
   for x=x1,x2,sdx do
     local t = (x2-x)/dx
     local u = ((1-t)*t1/w1+t*t2/w2)/((1-t)/w1+t/w2)
-    sspr((sp%16+u)*8,flr(sp/16)*8,1,8,x,y1,1,y1b-flr(y1))
+    sspr((sp%16+u)*8,flr(sp/16)*8,1,8,x,y1b,1,y1-flr(y1b))
     --line(x,y1,x,y1b)
 
     y1 += tt
@@ -522,16 +522,16 @@ function bssfunc(x,y)
   end
 end
 
---flatbsscount = 0
---stepbystep = false
+flatbsscount = 0
+stepbystep = false
 function flatbss(x,y)
-  map(x,y,x*8,y*8,1,1)
+  --map(x,y,x*8,y*8,1,1)
 
-  --x,y = x*8,y*8
-  --rectfill(x,y,x+8,y+8,7)
-  --rect(x,y,x+8,y+8,0)
-  --print(flatbsscount,x+1,y+2,1)
-  --flatbsscount += 1
+  x,y = x*8,y*8
+  rectfill(x,y,x+8,y+8,7)
+  rect(x,y,x+8,y+8,0)
+  print(flatbsscount,x+1,y+2,1)
+  flatbsscount += 1
 end
 
 ---------- DRAW/UPDATE ----------
@@ -562,40 +562,31 @@ function _draw()
     --bresescan(flatbss,rcx,rcy,getfarsegment())
     --parascan(flatbss,rcx,rcy,getfarsegment())
     
-    --flatbsscount = 0
-    --stepbystep = false
-    disperscan(flatbss)
+    flatbsscount = 0
+    stepbystep = false
+    local tri = disperscan(flatbss)
     player:draw()
 
-    --[[local ppx = player.pos.x
-    local ppy = player.pos.y
-    local unit = player:getunitdir()
-    local cx, cy, d, m = raydda(ppx, ppy, unit.x, unit.y, 16)
+    if btn(🅾️) then
+      local px,py,xl,yl,xr,yr = rcx,rcy, getfarsegment()
+      px*=8 py*=8 xl*=8 yl*=8 xr*=8 yr*=8
 
-    if d then
-      line(ppx * 8, ppy * 8, cx * 8, cy * 8, 12)
-    end--]]
+      color(7)
+      line(xl,yl,xr,yr)
+      line(px,py,xl,yl)
+      line(px,py,xr,yr)
 
-    local px,py = rcx*8,rcy*8
-    local xl,yl,xr,yr = getfarsegment()
-    xl*=8
-    yl*=8
-    xr*=8
-    yr*=8
+      px,py,xl,yl,xr,yr = unpack(tri)
+      px*=8 py*=8 xl*=8 yl*=8 xr*=8 yr*=8
 
-    color(7)
-    line(xl,yl,xr,yr)
-    line(px,py,xl,yl)
-    line(px,py,xr,yr)
+      color(7)
+      line(xl,yl,xr,yr)
+      line(px,py,xl,yl)
+      line(px,py,xr,yr)
 
-    local mx, my = stat(32)+cx*8, stat(33)+cy*8
-    spr(32,mx,my)
-    print(pointintriangle(mx,my,px,py,xl,yl,xr,yr),mx+6,my+2,7)
-
-    if m then
-      m = m[1]
-      camera(0, 0)
-      sspr(m % 16 * 8, flr(m / 16) * 8, 8, 8, 10, 10, 16, 16)
+      local mx, my = stat(32)+cx*8, stat(33)+cy*8
+      spr(32,mx,my)
+      print(pointintriangle(mx,my,px,py,xl,yl,xr,yr),mx+6,my+2,7)
     end
   elseif rendermode == modes.raycast then
     camera(-64,-64)

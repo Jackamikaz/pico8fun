@@ -1,4 +1,4 @@
-function bresenhamlog(x1, y1, x2, y2)
+--[[function bresenhamlog(x1, y1, x2, y2)
   local t = {}
   x1 = flr(x1)
   y1 = flr(y1)
@@ -98,19 +98,19 @@ function parascan(func,px,py,x1,y1,x2,y2)
   local bl = flr(minx(px,x1,x2))
   local br = flr(maxx(px,x1,x2))
   local dx,dy,lx,ly,sx,sy = unpack(parascanvalues[flr((cam_dir+1/16)%1*8)+1]) -- line direction
-  --[[local lx,ly = dy,-dx --direction to player
-  local sx,sy = -lx,-ly --start position
-  if (sx==0) sx = -dx
-  if (sy==0) sy = -dy
-  --lx,ly = (sy+1)/2,(-sx+1)/2
-  sx,sy = (sx+1)/2,(sy+1)/2]]
+  --local lx,ly = dy,-dx --direction to player
+  --local sx,sy = -lx,-ly --start position
+  --if (sx==0) sx = -dx
+  --if (sy==0) sy = -dy
+  ----lx,ly = (sy+1)/2,(-sx+1)/2
+  --sx,sy = (sx+1)/2,(sy+1)/2
   sx,sy = (1-sx)*bl+sx*br,(1-sy)*bt+sy*bb
 
-  --[[printh("------------------------")
-  printh("bt="..bt..", bb="..bb..", bl="..bl..", br="..br)
-  printh("dx="..dx..", dy="..dy)
-  printh("lx="..lx..", ly="..ly)
-  printh("sx="..sx..", sy="..sy)]]
+  --printh("------------------------")
+  --printh("bt="..bt..", bb="..bb..", bl="..bl..", br="..br)
+  --printh("dx="..dx..", dy="..dy)
+  --printh("lx="..lx..", ly="..ly)
+  --printh("sx="..sx..", sy="..sy)
 
   local diag = abs(dx)+abs(dy)
 
@@ -164,11 +164,119 @@ function disperscanfire(func,x,y,dx,dy,tri,subfire)
       disperscanfire(func,x-px,y-py,-px,-py,tri,0)
     end
     func(flr(x),flr(y))
+    return true
   end
+  return false
 end
 
 function disperscan(func)
-  local tri = {cam_x,cam_y,getfarsegment()}
   local dx,dy = unpack(firstfire[flr((cam_dir+1/16)%1*8)+1])
-  disperscanfire(func,cam_x,cam_y,dx,dy,tri,1)
+  local tri = {expandtriangle(0.71,cam_x,cam_y,getfarsegment())}
+
+  local sx,sy = flr(cam_x)+0.5,flr(cam_y)+0.5
+  while not disperscanfire(func,sx,sy,dx,dy,tri,1) do
+    sx += dx sy += dy
+  end
+  -- edge case on diagonals where a cell near the camera isn't caught by the disperscan
+  if abs(dx)+abs(dy)==2 then
+    sx, sy = flr(sx), flr(sy)
+    func(sx-dx,sy)
+    func(sx,sy-dy)
+  end
+
+  --print(flr((cam_dir+1/16)%1*8)+1,0,0,7)
+
+  return tri
+end--]]
+
+function shiftline(x1,y1,x2,y2,d)
+  local nx,ny = y2-y1,x1-x2
+  local f = d/sqrt(nx*nx+ny*ny)
+  nx,ny = nx*f,ny*f
+  return x1+nx,y1+ny,x2+nx,y2+ny
+end
+
+-- winding order sensitive
+function expandtriangle(d,x1,y1,x2,y2,x3,y3)
+  local fx1,fy1,fx2,fy2 = shiftline(x2,y2,x3,y3,d)
+  local lx1,ly1,lx2,ly2 = shiftline(x1,y1,x2,y2,d)
+  local rx1,ry1,rx2,ry2 = shiftline(x3,y3,x1,y1,d)
+
+  local npx,npy = lineintersection(lx1,ly1,lx2,ly2,rx1,ry1,rx2,ry2)
+  local nlx,nly = lineintersection(lx1,ly1,lx2,ly2,fx1,fy1,fx2,fy2)
+  local nrx,nry = lineintersection(rx1,ry1,rx2,ry2,fx1,fy1,fx2,fy2)
+
+  return npx,npy,nlx,nly,nrx,nry
+end
+
+_dxdy = {
+  {-1, 0},
+  { 0, 1},
+  { 1, 0},
+  { 0,-1},
+}
+
+function middle(x,y)
+  assert(x ~= nil)
+  return flr(x)+0.5,flr(y)+0.5
+end
+
+function printv(s,...)
+  local v = {...}
+  local r = ""
+  for i,n in ipairs(split(s)) do
+    r = r..n.."="..v[i].." "
+  end
+  printh(r)
+end
+
+function sgn0(v)
+  if v==0 then return 0 else return sgn(v) end
+end
+
+function sqrdst(x1,y1,x2,y2)
+  local dx,dy = x1-x2,y2-y1
+  local r = dx*dx+dy*dy
+  --overflow can happen! limit to max
+  if (r < 0) return 0x7fff.ffff
+  return r
+end
+
+function disperscan(func)
+  local dx,dy = unpack(_dxdy[flr((cam_dir+1/8)%1*4)+1])
+  local pdx,pdy = -dy,dx
+  local px,py,lx,ly,rx,ry = expandtriangle(0.71,cam_x,cam_y,getfarsegment())
+  local lsd = sqrdst(px,py,lx,ly)
+  local ex,ey = middle(cam_x,cam_y)
+  local sx,sy = middle(lineintersection(ex,ey,ex+dx,ey+dy,lx,ly,rx,ry))
+  for i=1,abs((sx-ex)*dx)+abs((sy-ey)*dy)+1 do
+    local fsx,fsy = lineintersection(sx,sy,sx+pdx,sy+pdy,lx,ly,rx,ry)
+    local skip = sqrdst(sx,sy,fsx,fsy) > lsd
+
+    local li = {
+      {lineintersection(sx,sy,sx+pdx,sy+pdy,px,py,rx,ry)},
+      {lineintersection(sx,sy,sx+pdx,sy+pdy,px,py,lx,ly)}}
+
+    for i=1,2 do
+      local msx,msy = unpack(li[i])
+
+      if skip or lsd > sqrdst(px,py,msx,msy) then
+        msx,msy = middle(msx,msy)
+      else
+        msx,msy = middle(fsx,fsy)
+      end
+      
+      local f = (i-1)*2-1
+      if sgn0(msx-sx)==pdx*f and sgn0(msy-sy)==pdy*f then
+        while msx ~= sx or msy ~= sy do
+          func(flr(msx),flr(msy))
+          msx -= pdx*f msy -= pdy*f
+        end
+      end
+    end
+    func(flr(sx),flr(sy))
+    sx += dx sy += dy
+  end
+
+  return {px,py,lx,ly,rx,ry}
 end
