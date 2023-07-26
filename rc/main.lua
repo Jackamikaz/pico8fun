@@ -1,9 +1,9 @@
 ---------- PLAYER ----------
 player = {}
-player.pos = vec:new(9.5, 8.5)
+player.pos = vec:new(8.5, 7.5)
 player.alt = 0.5
 player.size = 2.5
-player.dir = 0.75
+player.dir = 0.25
 player.speed = 1 / 8
 player.turnrate = 0.0125
 player.radius = 0.2
@@ -77,11 +77,12 @@ function _init()
   poke(0x5f2d, 1) --enable mouse
 end
 
-function setupcamera(startx, starty, startz, startdir, startfar)
+function setupcamera(startx, starty, startz, startdir)
   cam_x = startx
   cam_y = starty
   cam_z = startz
-  cam_far = startfar or 8
+  cam_far = 8
+  cam_near = 0.085
   setcamdir(startdir)
 end
 
@@ -149,6 +150,33 @@ function buildluamap()
     end
   end
 
+  -- roof test for wood cabin
+  --local roof = {5,1}
+  local function setroof(x,y,z)
+    local lm = luamap[x | y << 8]
+    if (not lm) lm = {}
+    local floors = lm.floors or {}
+    append(floors,5,z)
+    lm.floors = floors
+    luamap[x | y << 8] = lm
+  end
+
+  for x=5,9 do
+    for y=0,3 do
+      setroof(x,y,1)    
+    end
+  end
+  setroof(6,9,0.1)
+  setroof(6,9,0.2)
+  setroof(6,9,0.3)
+  setroof(6,9,0.4)
+  setroof(6,9,0.5)
+  setroof(6,9,0.6)
+  setroof(6,9,0.7)
+  setroof(6,9,0.8)
+  setroof(6,9,0.9)
+  setroof(6,9,1)
+
   -- rework floor sprites for their tline'ing
   poke(0x5f55,0x00)
   for i=1,127 do
@@ -156,6 +184,7 @@ function buildluamap()
       rectfill(0,0,7,7,0)
       spr(i,0,0)
       local x,y = i*8%128,flr(i/16)*8
+      rectfill(x,y,x+7,y+7,0)
       sspr(4,4,4,4,x  ,y  )
       sspr(0,4,4,4,x+4,y  )
       sspr(0,0,4,4,x+4,y+4)
@@ -342,16 +371,14 @@ function drawfloortile(fx, fy, fz, s)
   if (y2 < y4) x2,y2,x4,y4 = x4,y4,x2,y2
   if (y2 < y3) x2,y2,x3,y3 = x3,y3,x2,y2
 
-  local ylimit = 0.01
-
-  if (y1 < ylimit) return
+  if (y1 < cam_near) return
 
   local alt,tra = cam_z-fz,3
   local x2b,x3b,x4b
 
-  if y2 < ylimit then
+  if y2 < cam_near then
     tra = 1
-    x2,y2 = x1+(x2-x1)/(y2-y1)*(ylimit-y1),ylimit
+    x2,y2 = x1+(x2-x1)/(y2-y1)*(cam_near-y1),cam_near
   end
 
   x2b = x1+(x4-x1)/(y4-y1)*(y2-y1)
@@ -368,38 +395,40 @@ function drawfloortile(fx, fy, fz, s)
   if (x3b < x3) x3, x3b = x3b, x3
 
   if tra > 1 then
-    if y3 < ylimit then
+    if y3 < cam_near then
       tra = 2
-      x3 = x2+(x3-x2)/(y3-y2)*(ylimit-y2)
-      x3b = x2b+(x3b-x2b)/(y3-y2)*(ylimit-y2)
-      y3 = ylimit
+      x3 = x2+(x3-x2)/(y3-y2)*(cam_near-y2)
+      x3b = x2b+(x3b-x2b)/(y3-y2)*(cam_near-y2)
+      y3 = cam_near
     else
       x4b = x4
-      if y4 < ylimit then
-        x4 = x4+(x4-x3)/(y3-y4)*(y4-ylimit)
-        x4b = x4b+(x4b-x3b)/(y3-y4)*(y4-ylimit)
-        y4 = ylimit
+      if y4 < cam_near then
+        x4 = x4+(x4-x3)/(y3-y4)*(y4-cam_near)
+        x4b = x4b+(x4b-x3b)/(y3-y4)*(y4-cam_near)
+        y4 = cam_near
       end
     end
   end
   
   --[[debug
-  local s = -30
-  line(-60,ylimit*s,60,ylimit*s,13)
-  line(x1*s,y1*s,x2*s,y2*s,7)
-  line(x1*s,y1*s,x2b*s,y2*s,7)
-  line(x2*s,y2*s,x2b*s,y2*s,7)
+  if fz==1 then
+    local s = -30
+    line(-60,cam_near*s,60,cam_near*s,13)
+    line(x1*s,y1*s,x2*s,y2*s,7)
+    line(x1*s,y1*s,x2b*s,y2*s,7)
+    line(x2*s,y2*s,x2b*s,y2*s,7)
 
-  if tra >= 2 then
-    line(x2*s,y2*s,x3*s,y3*s,7)
-    line(x2b*s,y2*s,x3b*s,y3*s,7)
-    line(x3*s,y3*s,x3b*s,y3*s,7)
-  end
+    if tra >= 2 then
+      line(x2*s,y2*s,x3*s,y3*s,7)
+      line(x2b*s,y2*s,x3b*s,y3*s,7)
+      line(x3*s,y3*s,x3b*s,y3*s,7)
+    end
 
-  if tra >= 3 then
-    line(x3*s,y3*s,x4*s,y4*s,7)
-    line(x3b*s,y3*s,x4b*s,y4*s,7)
-    line(x4*s,y4*s,x4b*s,y4*s,7)
+    if tra >= 3 then
+      line(x3*s,y3*s,x4*s,y4*s,7)
+      line(x3b*s,y3*s,x4b*s,y4*s,7)
+      line(x4*s,y4*s,x4b*s,y4*s,7)
+    end
   end--]]
 
   local df = projplanedist / y1
@@ -421,12 +450,10 @@ function drawfloortile(fx, fy, fz, s)
 end
 
 function floortrapeze(l,r,lt,rt,y1,y2,alt,ox,oy)
-  lt,rt=(lt-l)/(y2-y1),(rt-r)/(y2-y1)
-  --if(y1<0)l,r,y1=l-y1*lt,r-y1*rt,0
-  --y2=min(y2,128)
-  for y1=y1,min(64,y2) do
-    --rectfill(l,y1,r,y1)
-    
+  local s=sgn(y2-y1)
+  lt,rt=(lt-l)/(y2-y1)*s,(rt-r)/(y2-y1)*s
+  
+  for y1=y1,mid(y2,-64,64),s do
     if r >= -64 and l < 64 then
       local la,ra = mid(-64,flr(l), 63), mid(-64,flr(r), 63)
 
@@ -436,6 +463,7 @@ function floortrapeze(l,r,lt,rt,y1,y2,alt,ox,oy)
       local sd = ra-la
       pald(fd)
       tline(la,y1,ra,y1,lx-ox,ly-oy,(rx-lx)/sd,(ry-ly)/sd)
+      --rectfill(la,y1,ra,y1,7)
 
       --pset(la,y1,7) pset(ra,y1,8)
     end
@@ -463,21 +491,20 @@ end
 
 function drawwall(x1, y1, z1, x2, y2, z2, sp)
   -- cut the line to stay in front of the camera
-  local ylimit = 0.1
   --pretransformed by the caller now
   --x1,y1 = worldtocam(x1,y1)
   --x2,y2 = worldtocam(x2,y2)
   z1,z2 = cam_z-z1,cam_z-z2
   local t1,t2 = 1,0
-  if y1 < ylimit then
-    if (y2 < ylimit) return
-    t2 = (ylimit - y1)/(y2-y1)
+  if y1 < cam_near then
+    if (y2 < cam_near) return
+    t2 = (cam_near - y1)/(y2-y1)
     x1 += (x2-x1)*t2
-    y1 = ylimit
-  elseif y2 < ylimit then
-    t1 = (ylimit - y2)/(y1-y2)
+    y1 = cam_near
+  elseif y2 < cam_near then
+    t1 = (cam_near - y2)/(y1-y2)
     x2 += (x1-x2)*t1
-    y2 = ylimit
+    y2 = cam_near
     t1 = 1-t1
   end
 
@@ -495,7 +522,9 @@ function drawwall(x1, y1, z1, x2, y2, z2, sp)
   local y2b = z2 * df
 
   -- making sure we draw from left to right
-  if (x1 > x2) x1,y1,y1b,w1,x2,y2,y2b,w2 = x2,y2,y2b,w2,x1,y1,y1b,w1
+  --if (x1 > x2) x1,y1,y1b,w1,x2,y2,y2b,w2 = x2,y2,y2b,w2,x1,y1,y1b,w1
+  -- EDIT : nope, we're culling
+  if (x1 > x2) return
 
   -- calculate slopes
   local dx = x2-x1
@@ -561,7 +590,7 @@ function drawhorizon()
 end
 
 ---------- OTHER ----------
-function deductnormal(mt, cx, cy)
+--[[function deductnormal(mt, cx, cy)
   if mt.x1 then
     return vec:new(mt.y1 - mt.y2, mt.x2-mt.x1):unit()
   end
@@ -575,13 +604,18 @@ function deductnormal(mt, cx, cy)
   else
     return vec:new(0,1)
   end
-end
+end]]
 
 function bssfunc(x,y)
   local lm = luamap[x | y << 8]
   if lm then
-    local w = lm.walls
     local f = lm.floors
+    if f then
+      for i=1,#f,2 do
+        drawfloortile(x,y,f[i+1],f[i])
+      end
+    end
+    local w = lm.walls
     if w then
       local ord = {}
       for i=1,#w,7 do
@@ -598,11 +632,6 @@ function bssfunc(x,y)
         drawwall(unpack(w,2,8))
       end
     end
-    if f then
-      drawfloortile(x,y,0,f[1])
-    end
-  --elseif mget(x,y) ~= 0 then
-  --  drawfloortile(x,y,0,0)
   end
 end
 
