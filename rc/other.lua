@@ -1,4 +1,23 @@
---[[function bresenhamlog(x1, y1, x2, y2)
+-- Do not include! Those are just failed test...
+-- But you know even if it's useless it still feels like a waste if I delete all
+
+function deductnormal(mt, cx, cy)
+  if mt.x1 then
+    return vec:new(mt.y1 - mt.y2, mt.x2-mt.x1):unit()
+  end
+  local x,y = cx % 1, cy % 1
+  if x < 0.0005 then
+    return vec:new(-1,0)
+  elseif x > 0.9995 then
+    return vec:new(1,0)
+  elseif y < 0.0005 then
+    return vec:new(0,-1)
+  else
+    return vec:new(0,1)
+  end
+end
+
+function bresenhamlog(x1, y1, x2, y2)
   local t = {}
   x1 = flr(x1)
   y1 = flr(y1)
@@ -187,83 +206,37 @@ function disperscan(func)
   --print(flr((cam_dir+1/16)%1*8)+1,0,0,7)
 
   return tri
-end--]]
-
-function shiftline(x1,y1,x2,y2,d)
-  local nx,ny = y2-y1,x1-x2
-  local f = d/sqrt(nx*nx+ny*ny)
-  nx,ny = nx*f,ny*f
-  return x1+nx,y1+ny,x2+nx,y2+ny
 end
 
--- winding order sensitive
-function expandtriangle(d,x1,y1,x2,y2,x3,y3)
-  local fx1,fy1,fx2,fy2 = shiftline(x2,y2,x3,y3,d)
-  local lx1,ly1,lx2,ly2 = shiftline(x1,y1,x2,y2,d)
-  local rx1,ry1,rx2,ry2 = shiftline(x3,y3,x1,y1,d)
+-- adapted from @p01 trifill https://www.lexaloffle.com/bbs/?pid=azure_trifillr4-1
+function quadfillfloor(alt,x1,y1,x2,y2,x3,y3,x4,y4)
+  if (y1 > y2) x1,y1,x2,y2 = x2,y2,x1,y1
+  if (y3 > y4) x3,y3,x4,y4 = x4,y4,x3,y3
+  if (y1 > y3) x1,y1,x3,y3 = x3,y3,x1,y1
+  if (y2 > y4) x2,y2,x4,y4 = x4,y4,x2,y2
+  if (y2 > y3) x2,y2,x3,y3 = x3,y3,x2,y2
 
-  local npx,npy = lineintersection(lx1,ly1,lx2,ly2,rx1,ry1,rx2,ry2)
-  local nlx,nly = lineintersection(lx1,ly1,lx2,ly2,fx1,fy1,fx2,fy2)
-  local nrx,nry = lineintersection(rx1,ry1,rx2,ry2,fx1,fy1,fx2,fy2)
+  local s1,s2,s3--,s4
 
-  return npx,npy,nlx,nly,nrx,nry
-end
+  s1 = x1+(x4-x1)/(y4-y1)*(y2-y1)
+  s3 = x1+(x3-x1)/(y3-y1)*(y2-y1)
 
---saves token when using this at least 3 times
-function middle(x,y)
-  return flr(x)+0.5,flr(y)+0.5
-end
-
-function sgn0(v)
-  if (v==0) return 0
-  return sgn(v)
-end
-
-function sqrdst(x1,y1,x2,y2)
-  local dx,dy = x1-x2,y2-y1
-  local r = dx*dx+dy*dy
-  --overflow can happen! limit to max
-  if (r < 0) return 0x7fff.ffff
-  return r
-end
-
-function disperscan(func)
-  local dx,dy = -sgn(cam_dircos),-sgn(cam_dirsin)
-  if abs(cam_dircos) > abs(cam_dirsin) then
-    dy = 0 else dx = 0 end
-  local pdx,pdy = -dy,dx
-  local px,py,lx,ly,rx,ry = expandtriangle(0.71,cam_x,cam_y,getfarsegment())
-  local lsd = sqrdst(px,py,lx,ly)
-  local ex,ey = middle(cam_x,cam_y)
-  local sx,sy = middle(lineintersection(ex,ey,ex+dx,ey+dy,lx,ly,rx,ry))
-  --for i=1,abs((sx-ex)*dx)+abs((sy-ey)*dy)+1 do
-  for i=1,sqrt(sqrdst(sx,sy,ex,ey))+1 do
-    local pl = {sx,sy,sx+pdx,sy+pdy}
-    local fsx,fsy = lineintersection(lx,ly,rx,ry,unpack(pl))
-    local skip = sqrdst(sx,sy,fsx,fsy) > lsd
-
-    local li = {
-      {lineintersection(px,py,rx,ry,unpack(pl))},
-      {lineintersection(px,py,lx,ly,unpack(pl))}}
-
-    for i=1,2 do
-      local msx,msy = unpack(li[i])
-
-      if skip or lsd > sqrdst(px,py,msx,msy) then
-        msx,msy = middle(msx,msy)
-      else
-        msx,msy = middle(fsx,fsy)
-      end
-      
-      local f = (i-1)*2-1
-      if sgn0(msx-sx)==pdx*f and sgn0(msy-sy)==pdy*f then
-        while msx ~= sx or msy ~= sy do
-          func(flr(msx),flr(msy))
-          msx -= pdx*f msy -= pdy*f
-        end
-      end
-    end
-    func(flr(sx),flr(sy))
-    sx += dx sy += dy
+  if abs(s1 - x2) < abs(s3- x2) then
+    s1 = s3
+    s2 = x2+(x4-x2)/(y4-y2)*(y3-y2) -- s4
+  else
+    s2 = x1+(x4-x1)/(y4-y1)*(y3-y1)
   end
+
+  if (s1 < x2) x2, s1 = s1, x2
+  if (s2 < x3) x3, s2 = s2, x3
+
+  floortrapeze(x1,x1,x2,s1,y1,y2,alt)
+  floortrapeze(x2,s1,x3,s2,y2,y3,alt)
+  floortrapeze(x3,s2,x4,x4,y3,y4,alt)
+end
+
+function round(val)
+  local d = val % 1
+  if d < 0.5 then return flr(val) else return flr(val+1) end
 end

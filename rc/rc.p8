@@ -2,7 +2,15 @@ pico-8 cartridge // http://www.pico-8.com
 version 41
 __lua__
 #include useful.lua
-#include bresescan.lua
+#include collision.lua
+#include math.lua
+#include player.lua
+#include camera.lua
+#include palette.lua
+#include luamap.lua
+#include raycast.lua
+#include disperscan.lua
+#include gridcast.lua
 #include main.lua
 
 __gfx__

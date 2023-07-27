@@ -1,75 +1,3 @@
----------- PLAYER ----------
-player = {}
-player.pos = vec:new(8.5, 7.5)
-player.alt = 0.5
-player.size = 2.5
-player.dir = 0.25
-player.speed = 1 / 8
-player.turnrate = 0.0125
-player.radius = 0.2
-
-function player:draw()
-  local screenpos = self.pos * 8
-  circfill(screenpos.x, screenpos.y, self.size, 6)
-  local ppos = screenpos + self:getunitdir() * self.size
-  pset(ppos.x, ppos.y, 8)
-end
-
-function player:getunitdir()
-  return vec:new(cos(self.dir), sin(self.dir))
-end
-
-function btnn(b)
-  return btn(b) and 1 or 0
-end
-
-function player:update()
-  self.dir += (btnn(⬅️) - btnn(➡️)) * self.turnrate
-  local mov = self:getunitdir() * self.speed * (btnn(⬆️) - btnn(⬇️))
-
-  local function wallat(x,y)
-    local lm = luamap[x | y << 8]
-    return lm and lm.walls ~= nil
-  end
-
-  local my = flr(self.pos.y)
-  local nx = flr(self.pos.x + sgn(mov.x)*self.radius)
-  if (not wallat(nx,my)) self.pos.x += mov.x
-
-  local mx = flr(self.pos.x)
-  local ny = flr(self.pos.y + sgn(mov.y)*self.radius)
-  if (not wallat(mx,ny)) self.pos.y += mov.y
-end
-
-function player:copytocam()
-  cam_x = self.pos.x
-  cam_y = self.pos.y
-  cam_z = self.alt
-  setcamdir(self.dir)
-end
-
----------- INIT ----------
-
-fadepal = {
-split("[0]=0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15"),
-split("[0]=0,0,1,1,2,1,13,6,4,4,9,3,13,1,13"),
-split("[0]=14,0,0,0,0,1,0,1,13,2,2,4,1,1,0,1,13"),
-split("[0]=0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0")
-}
-
--- sets a darkened palette depending on distance
-function pald(d)
-  if d > 8 then
-    pal(fadepal[4])
-  elseif d > 7 then
-    pal(fadepal[3])
-  elseif d > 5 then
-    pal(fadepal[2])
-  else
-    pal()
-  end
-end
-
 function _init()
   setupcamera()
   setfov(0.2222)
@@ -77,663 +5,79 @@ function _init()
   poke(0x5f2d, 1) --enable mouse
 end
 
-function setupcamera(startx, starty, startz, startdir)
-  cam_x = startx
-  cam_y = starty
-  cam_z = startz
-  cam_far = 8
-  cam_near = 0.085
-  setcamdir(startdir)
-end
-
-function setcamdir(newdir)
-  cam_dir = newdir or 0
-  cam_dircos = cos(cam_dir)
-  cam_dirsin = sin(cam_dir)
-end
-
-function setfov(fov)
-  cam_halffov = fov/2
-  projplanedist = -64 * cos(cam_halffov) / sin(cam_halffov) --half screen width / tan(fov/2)
-  rayDir = {}
-  antiFishEye = {}
-  for x=-64,63 do
-    rayDir[x] = atan2(projplanedist, x)
-    antiFishEye[x] = 1 / cos(rayDir[x])
-  end
-end
-
-function getfarsegment()
-  local la,ra = cam_dir+cam_halffov,cam_dir-cam_halffov
-  local d = cam_far/cos(cam_halffov)
-  return cam_x + cos(la)*d, cam_y + sin(la)*d, cam_x + cos(ra)*d, cam_y + sin(ra)*d
-end
-
-function buildluamap()
-  luamap = {}
-
-  for y = 0,63 do
-    for x = 0,127 do
-      local m = mget(x,y)
-      if fget(m, 0) then
-        --[[local cell = {m}
-        if m == 3 then
-          cell[1] = 1
-          cell.x1 = x
-          cell.y1 = y
-          cell.x2 = x + 1
-          cell.y2 = y + 1
-        elseif m == 4 then
-          cell[1] = 1
-          cell.x1 = x + 1
-          cell.y1 = y
-          cell.x2 = x
-          cell.y2 = y + 1
-        end--]]
-        local w = {}
-        if not fget(mget(x-1,y),0) then
-          append(w,x,y,0,x,y+1,1,m)
-        end
-        if not fget(mget(x+1,y),0) then
-          append(w,x+1,y+1,0,x+1,y,1,m)
-        end
-        if not fget(mget(x,y-1),0) then
-          append(w,x+1,y,0,x,y,1,m)
-        end
-        if not fget(mget(x,y+1),0) then
-          append(w,x,y+1,0,x+1,y+1,1,m)
-        end
-        luamap[x | y << 8] = {walls=w}
-      elseif m~=0 then
-        luamap[x | y << 8] = {floors={m,0}}
-      end
-    end
-  end
-
-  -- roof test for wood cabin
-  --local roof = {5,1}
-  local function setroof(x,y,z)
-    local lm = luamap[x | y << 8]
-    if (not lm) lm = {}
-    local floors = lm.floors or {}
-    append(floors,5,z)
-    lm.floors = floors
-    luamap[x | y << 8] = lm
-  end
-
-  for x=5,9 do
-    for y=0,3 do
-      setroof(x,y,1)    
-    end
-  end
-  setroof(6,9,0.1)
-  setroof(6,9,0.2)
-  setroof(6,9,0.3)
-  setroof(6,9,0.4)
-  setroof(6,9,0.5)
-  setroof(6,9,0.6)
-  setroof(6,9,0.7)
-  setroof(6,9,0.8)
-  setroof(6,9,0.9)
-  setroof(6,9,1)
-
-  -- rework floor sprites for their tline'ing
-  poke(0x5f55,0x00)
-  for i=1,127 do
-    if fget(i) == 0 then
-      rectfill(0,0,7,7,0)
-      spr(i,0,0)
-      local x,y = i*8%128,flr(i/16)*8
-      rectfill(x,y,x+7,y+7,0)
-      sspr(4,4,4,4,x  ,y  )
-      sspr(0,4,4,4,x+4,y  )
-      sspr(0,0,4,4,x+4,y+4)
-      sspr(4,0,4,4,x  ,y+4)
-    end
-  end
-  poke(0x5f55,0x60)
-
-  -- set the map for "tline'ing the sprite sheet"
-  for i=0,127 do
-    local x,y = i*2%128,flr(i/64)*2
-    mset(x,y,i)
-    mset(x+1,y,i)
-    mset(x,y+1,i)
-    mset(x+1,y+1,i)
-  end
-end
-
----------- COLLISIONS ----------
-
---https://stackoverflow.com/questions/2049582/how-to-determine-if-a-point-is-in-a-2d-triangle
-function pointintriangle(px,py,x1,y1,x2,y2,x3,y3)
-  local s1 = (px-x2)*(y1-y2)-(x1-x2)*(py-y2) < 0
-  local s2 = (px-x3)*(y2-y3)-(x2-x3)*(py-y3) < 0
-  local s3 = (px-x1)*(y3-y1)-(x3-x1)*(py-y1) < 0
-  return s1 == s2 and s2 == s3
-end
-
---https://iq.opengenus.org/2d-line-intersection/#:~:text=Step%201%20%3A%20Input%20four%20coordinates,of%20slope%20of%20each%20line.
-function lineintersection(x1, y1, x2, y2, x3, y3, x4, y4)
-  local x12 = x1 - x2
-  local x34 = x3 - x4
-  local y12 = y1 - y2
-  local y34 = y3 - y4
-  local c = x12 * y34 - y12 * x34
-  --if (c~=0) then
-    local a = x1 * y2 - y1 * x2
-    local b = x3 * y4 - y3 * x4
-    return (a * x34 - b * x12 ) / c, (a * y34 - b * y12) / c
-  --end
-end
-
-function raydda(px, py, rx, ry, md)
-  local x2,y2 = px+rx,py+ry
-  --[[
-  px, py : player pos
-  rx, ry : unit ray dir
-  ux, uy : unit step size
-  mx, my : map coord
-  lx, ly : ray length 1D
-  sx, sy : step X, step Y
-]]
-  local ux,uy = abs(1 / rx), abs(1 / ry)
-  local mx,my = flr(px), flr(py)
-  local rl1x,rl1y,sx,sy
-
-  if rx < 0 then
-    sx = -1
-    lx = (px - mx) * ux
-  else
-    sx = 1
-    lx = (mx + 1 - px) * ux
-  end
-
-  if ry < 0 then
-    sy = -1
-    ly = (py - my) * uy
-  else
-    sy = 1
-    ly = (my + 1 - py) * uy
-  end
-
-  local d = 0
-  while d < md do
-    if lx < ly then
-      mx += sx
-      d = lx
-      lx += ux
-    else
-      my += sy
-      d = ly
-      ly += uy
-    end
-
-    --local m = mget(mx, my)
-    local m = luamap[mx | my << 8]
-    if m then
-      if m.x1 then
-        local cx,cy = lineintersection(px,py,x2,y2,m.x1,m.y1,m.x2,m.y2)
-        if cx and cx >= mx and cx <= mx + 1 and cy >= my and cy <= my + 1 then
-          local dx, dy = cx-px, cy-py
-          return cx, cy, sqrt(dx*dx+dy*dy), m
-        end
-      elseif m.walls then
-        return px + rx * d, py + ry * d, d, m
-      end
-    end
-  end
-end
-
----------- RAYCAST ----------
-
--- translate world position to screen coordinates
-function getscreenpos(mx,my,mz)
-  --[[local dx, dy = mx - cam_x, my - cam_y
-  local d = sqrt(dx*dx+dy*dy)
-  local raydir = atan2(dx,dy) - cam_dir
-  local crd = cos(raydir)
-  local afe = 1 / crd
-  local x = projplanedist * sin(raydir) * afe
-  local depthfactor = afe * projplanedist / d
-  local y = mz * depthfactor
-  if (abs(raydir)+0.25)%1 >= 0.5 then
-    if -crd * d > projplanedist/128 then
-      return
-    else
-      return -x, -y
-    end
-  else
-    return x,y
-  end--]]
-
-  mx,my = my-cam_y, mx-cam_x
-  mx,my = mx*cam_dircos - my*cam_dirsin, mx*cam_dirsin + my*cam_dircos
-  if my > 0.1 then
-    local df = projplanedist / my
-    return mx * df, mz * df
-  end
-end
-
--- adapted from @p01 trifill https://www.lexaloffle.com/bbs/?pid=azure_trifillr4-1
---[[function quadfillfloor(alt,x1,y1,x2,y2,x3,y3,x4,y4)
-  if (y1 > y2) x1,y1,x2,y2 = x2,y2,x1,y1
-  if (y3 > y4) x3,y3,x4,y4 = x4,y4,x3,y3
-  if (y1 > y3) x1,y1,x3,y3 = x3,y3,x1,y1
-  if (y2 > y4) x2,y2,x4,y4 = x4,y4,x2,y2
-  if (y2 > y3) x2,y2,x3,y3 = x3,y3,x2,y2
-
-  local s1,s2,s3--,s4
-
-  s1 = x1+(x4-x1)/(y4-y1)*(y2-y1)
-  s3 = x1+(x3-x1)/(y3-y1)*(y2-y1)
-
-  if abs(s1 - x2) < abs(s3- x2) then
-    s1 = s3
-    s2 = x2+(x4-x2)/(y4-y2)*(y3-y2) -- s4
-  else
-    s2 = x1+(x4-x1)/(y4-y1)*(y3-y1)
-  end
-
-  if (s1 < x2) x2, s1 = s1, x2
-  if (s2 < x3) x3, s2 = s2, x3
-
-  floortrapeze(x1,x1,x2,s1,y1,y2,alt)
-  floortrapeze(x2,s1,x3,s2,y2,y3,alt)
-  floortrapeze(x3,s2,x4,x4,y3,y4,alt)
-end]]
-
-function worldtocam(wx,wy)
-  wx,wy = wy-cam_y, wx-cam_x
-  return wx*cam_dircos - wy*cam_dirsin, wx*cam_dirsin + wy*cam_dircos
-end
-
---offsets = {0,0,1,0,1,1,0,1}
-function drawfloortile(fx, fy, fz, s)
-  local ox,oy = fx-s*2-0.5,fy-0.5
-  --[[local points = {}
-  for i=1,7,2 do
-    local sx,sy = getscreenpos(fx+offsets[i],fy+offsets[i+1],cam_z-fz)
-    if (not sx) return
-    add(points,sx)
-    add(points,sy)
-  end
-
-  quadfillfloor(cam_z-fz,unpack(points))]]
-  local x1,y1 = worldtocam(fx,fy)
-  local x2,y2 = worldtocam(fx+1,fy)
-  local x3,y3 = worldtocam(fx+1,fy+1)
-  local x4,y4 = worldtocam(fx,fy+1)
-
-  if (y1 < y2) x1,y1,x2,y2 = x2,y2,x1,y1
-  if (y3 < y4) x3,y3,x4,y4 = x4,y4,x3,y3
-  if (y1 < y3) x1,y1,x3,y3 = x3,y3,x1,y1
-  if (y2 < y4) x2,y2,x4,y4 = x4,y4,x2,y2
-  if (y2 < y3) x2,y2,x3,y3 = x3,y3,x2,y2
-
-  if (y1 < cam_near) return
-
-  local alt,tra = cam_z-fz,3
-  local x2b,x3b,x4b
-
-  if y2 < cam_near then
-    tra = 1
-    x2,y2 = x1+(x2-x1)/(y2-y1)*(cam_near-y1),cam_near
-  end
-
-  x2b = x1+(x4-x1)/(y4-y1)*(y2-y1)
-  x3b = x1+(x3-x1)/(y3-y1)*(y2-y1)
-
-  if abs(x2b - x2) < abs(x3b- x2) then
-    x2b = x3b
-    x3b = x2+(x4-x2)/(y4-y2)*(y3-y2)
-  else
-    x3b = x1+(x4-x1)/(y4-y1)*(y3-y1)
-  end
-
-  if (x2b < x2) x2, x2b = x2b, x2
-  if (x3b < x3) x3, x3b = x3b, x3
-
-  if tra > 1 then
-    if y3 < cam_near then
-      tra = 2
-      x3 = x2+(x3-x2)/(y3-y2)*(cam_near-y2)
-      x3b = x2b+(x3b-x2b)/(y3-y2)*(cam_near-y2)
-      y3 = cam_near
-    else
-      x4b = x4
-      if y4 < cam_near then
-        x4 = x4+(x4-x3)/(y3-y4)*(y4-cam_near)
-        x4b = x4b+(x4b-x3b)/(y3-y4)*(y4-cam_near)
-        y4 = cam_near
-      end
-    end
-  end
-  
-  --[[debug
-  if fz==1 then
-    local s = -30
-    line(-60,cam_near*s,60,cam_near*s,13)
-    line(x1*s,y1*s,x2*s,y2*s,7)
-    line(x1*s,y1*s,x2b*s,y2*s,7)
-    line(x2*s,y2*s,x2b*s,y2*s,7)
-
-    if tra >= 2 then
-      line(x2*s,y2*s,x3*s,y3*s,7)
-      line(x2b*s,y2*s,x3b*s,y3*s,7)
-      line(x3*s,y3*s,x3b*s,y3*s,7)
-    end
-
-    if tra >= 3 then
-      line(x3*s,y3*s,x4*s,y4*s,7)
-      line(x3b*s,y3*s,x4b*s,y4*s,7)
-      line(x4*s,y4*s,x4b*s,y4*s,7)
-    end
-  end--]]
-
-  local df = projplanedist / y1
-  x1,y1 = x1*df, alt*df
-
-  df = projplanedist / y2
-  x2,x2b,y2 = x2*df, x2b*df, alt*df
-  floortrapeze(x1,x1,x2,x2b,y1,y2,alt,ox,oy)
-
-  if (tra < 2) return
-  df = projplanedist / y3
-  x3,x3b,y3 = x3*df, x3b*df, alt*df
-  floortrapeze(x2,x2b,x3,x3b,y2,y3,alt,ox,oy)
-
-  if (tra < 3) return
-  df = projplanedist / y4
-  x4,x4b,y4 = x4*df, x4b*df, alt*df
-  floortrapeze(x3,x3b,x4,x4b,y3,y4,alt,ox,oy)
-end
-
-function floortrapeze(l,r,lt,rt,y1,y2,alt,ox,oy)
-  local s=sgn(y2-y1)
-  lt,rt=(lt-l)/(y2-y1)*s,(rt-r)/(y2-y1)*s
-  
-  for y1=y1,mid(y2,-64,64),s do
-    if r >= -64 and l < 64 then
-      local la,ra = mid(-64,flr(l), 63), mid(-64,flr(r), 63)
-
-      local lx,ly,fd = getfloorpos(la,y1,alt)
-      local rx,ry = getfloorpos(ra,y1,alt)
-
-      local sd = ra-la
-      pald(fd)
-      tline(la,y1,ra,y1,lx-ox,ly-oy,(rx-lx)/sd,(ry-ly)/sd)
-      --rectfill(la,y1,ra,y1,7)
-
-      --pset(la,y1,7) pset(ra,y1,8)
-    end
-
-    l+=lt
-    r+=rt
-  end
-end
-
-function getfloorpos(sx, sy, cz)
-  local floordist = antiFishEye[sx] * cz * projplanedist / sy
-  local raydir = cam_dir + rayDir[sx]
-  return cam_x + cos(raydir) * floordist, cam_y + sin(raydir) * floordist, floordist*cos(rayDir[sx])
-end
-
-function drawfloor(alt)
-  for y=1,63 do
-    local lx,ly,fd = getfloorpos(-64,y,cam_z-alt)
-    local rx,ry = getfloorpos(63,y,cam_z-alt)
-
-    pald(fd)
-    tline(-64,y,63,y,lx,ly,(rx-lx)/128,(ry-ly)/128)
-  end
-end
-
-function drawwall(x1, y1, z1, x2, y2, z2, sp)
-  -- cut the line to stay in front of the camera
-  --pretransformed by the caller now
-  --x1,y1 = worldtocam(x1,y1)
-  --x2,y2 = worldtocam(x2,y2)
-  z1,z2 = cam_z-z1,cam_z-z2
-  local t1,t2 = 1,0
-  if y1 < cam_near then
-    if (y2 < cam_near) return
-    t2 = (cam_near - y1)/(y2-y1)
-    x1 += (x2-x1)*t2
-    y1 = cam_near
-  elseif y2 < cam_near then
-    t1 = (cam_near - y2)/(y1-y2)
-    x2 += (x1-x2)*t1
-    y2 = cam_near
-    t1 = 1-t1
-  end
-
-  -- transform coordinates for depth
-  local d1,d2 = y1,y2
-
-  local w1 = 1 / y1
-  local df = projplanedist / y1
-  x1,y1 = x1*df,z1*df
-  local y1b = z2*df
-
-  local w2 = 1 / y2
-  df = projplanedist / y2
-  x2,y2 = x2*df,z1*df
-  local y2b = z2 * df
-
-  -- making sure we draw from left to right
-  --if (x1 > x2) x1,y1,y1b,w1,x2,y2,y2b,w2 = x2,y2,y2b,w2,x1,y1,y1b,w1
-  -- EDIT : nope, we're culling
-  if (x1 > x2) return
-
-  -- calculate slopes
-  local dx = x2-x1
-  local tt,bt,dt = (y2-y1)/dx,(y2b-y1b)/dx,(d2-d1)/dx
-
-  -- confine to the screen edges
-  if (x2 < -64 or x1 > 64) return
-  if x1 < -64 then
-    local d = -64-x1
-    --printh(d) stop()
-    y1 += tt*d
-    y1b += bt*d
-    d1 += dt*d
-    x1 = -64
-  end
-  local x2b = x2
-  if (x2b > 64) x2b = 64
-
-  -- draw!
-  for x=x1,x2b do
-    local t = (x2-x)/dx
-    local u = ((1-t)*t1/w1+t*t2/w2)/((1-t)/w1+t/w2)
-    pald(d1)
-    sspr((sp%16+u)*8,flr(sp/16)*8,1,8,x,y1b,1,y1-flr(y1b))
-    --line(x,y1,x,y1b)
-
-    y1 += tt
-    y1b += bt
-    d1 += dt
-  end
-end
-
---function round(val)
---  local d = val % 1
---  if d < 0.5 then return flr(val) else return flr(val+1) end
---end
-
-function drawhorizon()
-  for x=-64,63 do
-    local raydir = cam_dir + rayDir[x]
-    local rx = cos(raydir)
-    local ry = sin(raydir)
-    local cx,cy,d,mr = raydda(cam_x, cam_y, rx, ry, cam_far)
-    if cx then
-      local tx = abs(cx % 1)
-      local ty = abs(cy % 1)
-      local c
-      if abs(tx - 0.5) < abs(ty - 0.5) then
-        c = tx
-      else
-        c = ty
-      end
-
-      local m = mr.walls[7] or 1
-      local depthfactor = antiFishEye[x] * projplanedist / d
-      local walltop = -(1-cam_z) * depthfactor
-      sspr((m%16 + c)*8,flr(m/16)*8,1,8,x,walltop+1,1,depthfactor + walltop%1)
-
-      --local halfwall = flr(antiFishEye[x] * 0.5 * projplanedist / d)
-      --sspr((m%16 + c)*8,flr(m/16)*8,1,8,x,-halfwall+1,1,halfwall*2)
-    end
-  end
-end
-
----------- OTHER ----------
---[[function deductnormal(mt, cx, cy)
-  if mt.x1 then
-    return vec:new(mt.y1 - mt.y2, mt.x2-mt.x1):unit()
-  end
-  local x,y = cx % 1, cy % 1
-  if x < 0.0005 then
-    return vec:new(-1,0)
-  elseif x > 0.9995 then
-    return vec:new(1,0)
-  elseif y < 0.0005 then
-    return vec:new(0,-1)
-  else
-    return vec:new(0,1)
-  end
-end]]
-
-function bssfunc(x,y)
-  local lm = luamap[x | y << 8]
-  if lm then
-    local f = lm.floors
-    if f then
-      for i=1,#f,2 do
-        drawfloortile(x,y,f[i+1],f[i])
-      end
-    end
-    local w = lm.walls
-    if w then
-      local ord = {}
-      for i=1,#w,7 do
-        local x1,y1,z1,x2,y2,z2,m = unpack(w,i,i+6)
-        x1,y1 = worldtocam(x1,y1)
-        x2,y2 = worldtocam(x2,y2)
-        local d = y1+y2--no need to divide by 2, the comparison is still correct
-        addordered(ord,{d,x1,y1,z1,x2,y2,z2,m},
-          function(a,b)
-            return a[1] > b[1]
-          end)
-      end
-      for _,w in ipairs(ord) do
-        drawwall(unpack(w,2,8))
-      end
-    end
-  end
-end
-
-flatbsscount = 0
-stepbystep = false
-function flatbss(x,y)
+flatcellcount = 0
+function drawflatcell(x,y)
   map(x,y,x*8,y*8,1,1)
 
   --x,y = x*8,y*8
   --rectfill(x,y,x+8,y+8,7)
   --rect(x,y,x+8,y+8,0)
-  --print(flatbsscount,x+1,y+2,1)
-  --flatbsscount += 1
+  --print(flatcellcount,x+1,y+2,1)
+  --flatcellcount += 1
 end
-
----------- DRAW/UPDATE ----------
 
 function _update()
   player:update()
   player:copytocam()
 end
 
-modes = {top = 0, raycast=1, newtech=2, max=3}
+drawmethods = {
+function() -- 2D DRAW ------------------------------
+  local cx = cam_x - 8
+  local cy = cam_y - 8
+  camera(cx * 8, cy * 8)
 
-rendermode = modes.newtech
-pallvl = 0
+  --map(cx, cy, flr(cx) * 8, flr(cy) * 8, 17, 17)
+  
+  flatcellcount = 0
+  local tri = disperscan(drawflatcell)
+  player:draw()
+
+  if btn(🅾️) then
+    local px,py,xl,yl,xr,yr = cam_x,cam_y, getfarsegment()
+    px*=8 py*=8 xl*=8 yl*=8 xr*=8 yr*=8
+
+    color(7)
+    line(xl,yl,xr,yr)
+    line(px,py,xl,yl)
+    line(px,py,xr,yr)
+
+    px,py,xl,yl,xr,yr = unpack(tri)
+    px*=8 py*=8 xl*=8 yl*=8 xr*=8 yr*=8
+
+    color(7)
+    line(xl,yl,xr,yr)
+    line(px,py,xl,yl)
+    line(px,py,xr,yr)
+
+    local mx, my = stat(32)+cx*8, stat(33)+cy*8
+    spr(32,mx,my)
+    print(pointintriangle(mx,my,px,py,xl,yl,xr,yr),mx+6,my+2,7)
+  end
+end,
+function() -- CLASSIC RAYCAST ------------------------------
+  camera(-64,-64)
+  floorcast(0)
+  raycast()
+end,
+function() -- MY "GRIDCASTING" ------------------------------
+  camera(-64,-64)
+
+  cam_z = 0.5--1+sin(t()/3)*0.5
+  disperscan(draw3Dcell)
+end}
+
+currentdraw = 3
 
 function _draw()
   cls()
 
   if btnp(❎) then
-    rendermode = (rendermode + 1) % modes.max
+    currentdraw = (currentdraw + 1) % #drawmethods + 1
   end
 
-  local rcx,rcy = cam_x,cam_y --cam_x-cam_dircos*2,cam_y-cam_dirsin*2
-  if rendermode == modes.top then
-    local cx = player.pos.x - 8
-    local cy = player.pos.y - 8
-    camera(cx * 8, cy * 8)
+  drawmethods[currentdraw]()
 
-    --map(cx, cy, flr(cx) * 8, flr(cy) * 8, 17, 17)
-    --bresescan(flatbss,rcx,rcy,getfarsegment())
-    --parascan(flatbss,rcx,rcy,getfarsegment())
-    
-    flatbsscount = 0
-    stepbystep = false
-    local tri = disperscan(flatbss)
-    player:draw()
-
-    if btn(🅾️) then
-      local px,py,xl,yl,xr,yr = rcx,rcy, getfarsegment()
-      px*=8 py*=8 xl*=8 yl*=8 xr*=8 yr*=8
-
-      color(7)
-      line(xl,yl,xr,yr)
-      line(px,py,xl,yl)
-      line(px,py,xr,yr)
-
-      px,py,xl,yl,xr,yr = unpack(tri)
-      px*=8 py*=8 xl*=8 yl*=8 xr*=8 yr*=8
-
-      color(7)
-      line(xl,yl,xr,yr)
-      line(px,py,xl,yl)
-      line(px,py,xr,yr)
-
-      local mx, my = stat(32)+cx*8, stat(33)+cy*8
-      spr(32,mx,my)
-      print(pointintriangle(mx,my,px,py,xl,yl,xr,yr),mx+6,my+2,7)
-    end
-  elseif rendermode == modes.raycast then
-    camera(-64,-64)
-    drawfloor(0)
-    drawhorizon()
-
-    local mx, my = stat(32)-64, stat(33)-64
-    spr(32,mx,my)
-
-    --local a = 0.4--sin(t()*0.25) * 0.4
-    --drawfloortile(9,25,a, 0)
-
-    --drawwall(2,22,1,4,23,0, 1)
-    --drawwall(4,23,1,5,25,0, 17)
-    --[[local x1,y1 = getscreenpos(px, py, 2, 2, pd, alt)
-    local x2,y2 = getscreenpos(px, py, 3, 2, pd, alt)
-    local x3,y3 = getscreenpos(px, py, 3, 3, pd, alt)
-    local x4,y4 = getscreenpos(px, py, 2, 3, pd, alt)
-    if x1 and x2 and x3 and x4 then
-      line(x1,y1,x2,y2,7)
-      line(x2,y2,x3,y3,7)
-      line(x3,y3,x4,y4,7)
-      line(x4,y4,x1,y1,7)
-    end]]
-  elseif rendermode == modes.newtech then
-    camera(-64,-64)
-
-    cam_z = 0.5--1+sin(t()/3)*0.5
-    disperscan(bssfunc)
-  end
-
-  --[[camera(0,0)
-    rectfill(0,0,50,14, 7)
-    color(0)
-    print(player.dir)--]]
+  camera(0,0)
+  spr(32,stat(32),stat(33))
 end
