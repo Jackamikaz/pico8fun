@@ -1,13 +1,21 @@
 -- translate world position to screen coordinates
-function getscreenpos(mx,my,mz)
-  mx,my = my-cam_y, mx-cam_x
-  mx,my = mx*cam_dircos - my*cam_dirsin, mx*cam_dirsin + my*cam_dircos
-  if my > 0.1 then
-    local df = projplanedist / my
-    return mx * df, mz * df
+function getscreenpos(wx,wy,wz)
+  wx,wy = wy-cam_y, wx-cam_x
+  wx,wy = wx*cam_dircos - wy*cam_dirsin, wx*cam_dirsin + wy*cam_dircos
+  if wy > 0.1 then
+    local df = projplanedist / wy
+    return wx * df, wz * df
   end
 end
 
+-- get world coordinate from a screen one given a known world z value
+function getfloorpos(sx, sy, wz)
+  local floordist = antiFishEye[sx] * wz * projplanedist / sy
+  local raydir = cam_dir + rayDir[sx]
+  return cam_x + cos(raydir) * floordist, cam_y + sin(raydir) * floordist, floordist*cos(rayDir[sx])
+end
+
+-- translate world position to camera coordinates
 function worldtocam(wx,wy)
   wx,wy = wy-cam_y, wx-cam_x
   return wx*cam_dircos - wy*cam_dirsin, wx*cam_dirsin + wy*cam_dircos
@@ -129,12 +137,6 @@ function floortrapeze(l,r,lt,rt,y1,y2,alt,ox,oy)
   end
 end
 
-function getfloorpos(sx, sy, cz)
-  local floordist = antiFishEye[sx] * cz * projplanedist / sy
-  local raydir = cam_dir + rayDir[sx]
-  return cam_x + cos(raydir) * floordist, cam_y + sin(raydir) * floordist, floordist*cos(rayDir[sx])
-end
-
 function drawwall(x1, y1, z1, x2, y2, z2, sp)
   -- cut the line to stay in front of the camera
   --pretransformed by the caller now
@@ -193,7 +195,11 @@ function drawwall(x1, y1, z1, x2, y2, z2, sp)
     local t = (x2-x)/dx
     local u = ((1-t)*t1/w1+t*t2/w2)/((1-t)/w1+t/w2)
     pald(d1)
-    sspr((sp%16+u)*8,flr(sp/16)*8,1,8,x,y1b,1,y1-flr(y1b))
+    if sp==1 then
+      tline(x,y1b,  x,y1+y1b%1,  u*2,4,  0,(z1-z2)/(y1-y1b)*2)
+    else
+      sspr((sp%16+u)*8,flr(sp/16)*8,1,8,x,y1b,1,y1-flr(y1b))
+    end
     --line(x,y1,x,y1b)
 
     y1 += tt
