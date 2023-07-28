@@ -2,6 +2,7 @@ pico-8 cartridge // http://www.pico-8.com
 version 41
 __lua__
 #include useful.lua
+#include vector.lua
 #include collision.lua
 #include math.lua
 #include player.lua
