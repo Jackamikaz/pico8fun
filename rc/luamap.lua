@@ -10,7 +10,7 @@ function buildluamap()
       local m = mget(x,y)
       -- ladder on [10,5]
       if x==10 and y==5 then
-        luamapset(x,y,{walls={x+0.1,y+1,x+0.1,y,0,1,20}, floors={m,0}})
+        luamapset(x,y,{walls={x+0.1,y+1,x+0.1,y,0,1,20}, floors={0,m}})
       elseif fget(m, 0) then
         local w = {}
         local h = 1
@@ -29,32 +29,62 @@ function buildluamap()
         end
         luamapset(x,y,{walls=w,solid=true})
       elseif m~=0 then
-        luamapset(x,y,{floors={m,0}})
+        luamapset(x,y,{floors={0,m}})
       end
     end
   end
 
   -- roof test for wood cabin
   --local roof = {5,1}
-  local function setroof(x,y,z)
-    local lm = luamap(x,y)
-    if (not lm) lm = {}
+  local function setroof(x,y,z,s)
+    local lm = luamap(x,y) or {}
     local floors = lm.floors or {}
-    append(floors,5,z)
+    append(floors,z,s)
     lm.floors = floors
     luamapset(x,y,lm)
   end
 
   for x=5,9 do
     for y=2,5 do
-      setroof(x,y,1)    
+      setroof(x,y,1,5)    
     end
   end
 
-  setroof(3,7,1)
-  setroof(5,7,1)
-  setroof(3,9,1)
+  -- some platforming to test to
+  local function addplatform(x,y,z)
+    local lm = luamap(x,y) or {}
+    local floors = lm.floors or {}
+    local walls = lm.walls or {}
+
+    local z1 = z-0.2
+
+    append(floors,z1,17)
+    append(floors,z,17)
+
+    append(walls,x,y,x,y+1,z1,z,17)
+    append(walls,x+1,y+1,x+1,y,z1,z,17)
+    append(walls,x+1,y,x,y,z1,z,17)
+    append(walls,x,y+1,x+1,y+1,z1,z,17)
+
+    lm.floors = floors
+    lm.walls = walls
+    lm.solid = true
+    luamapset(x,y,lm)
+  end
+
+  addplatform(5,7,1.3)
+  addplatform(5,9,1.6)
+  addplatform(7,9,1.9)
+  addplatform(9,9,2.2)
+  addplatform(9,7,2.5)
+  addplatform(9,5,2.8)
   
+  for x=8,10 do
+    for y=3,4 do
+      setroof(x,y,2.8,17)    
+    end
+  end
+
   -- stress test
   --for i=0.1,1,0.1 do
   --  setroof(6,9,i)

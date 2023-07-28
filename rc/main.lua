@@ -62,8 +62,6 @@ function() -- CLASSIC RAYCAST ------------------------------
 end,
 function() -- MY "GRIDCASTING" ------------------------------
   camera(-64,-64)
-
-  --cam_z = 0.5--1+sin(t()/3)*0.5
   disperscan(draw3Dcell)
 end}
 
@@ -72,12 +70,12 @@ currentdraw = 3
 function _draw()
   cls()
 
-  if btnp(❎) then
-    currentdraw = (currentdraw + 1) % #drawmethods + 1
-  end
+  --if btnp(❎) then
+  --  currentdraw = (currentdraw + 1) % #drawmethods + 1
+  --end
 
   drawmethods[currentdraw]()
 
-  camera(0,0)
-  spr(32,stat(32),stat(33))
+  --camera(0,0)
+  --spr(32,stat(32),stat(33))
 end

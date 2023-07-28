@@ -213,8 +213,17 @@ function draw3Dcell(x,y)
   if lm then
     local f = lm.floors
     if f then
+      local middle = 0x7fff
       for i=1,#f,2 do
-        drawfloortile(x,y,f[i+1],f[i])
+        local z = f[i]
+        if cam_z < z then
+          middle = i
+          break
+        end
+        drawfloortile(x,y,z,f[i+1])
+      end
+      for i=#f-1,middle,-1 do
+        drawfloortile(x,y,f[i],f[i+1])
       end
     end
     local w = lm.walls

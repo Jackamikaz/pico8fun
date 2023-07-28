@@ -43,7 +43,7 @@ function player.update(_ENV)
 
   local ground = 0
   if lm.floors then
-    for i = 2,#lm.floors,2 do
+    for i = 1,#lm.floors,2 do
       local z = lm.floors[i]
       if alt < z then
         break
@@ -55,7 +55,7 @@ function player.update(_ENV)
 
   if not touchingladder then
     vvel -= 0.01
-    if btnp(🅾️) and grounded then
+    if btnp(❎) and grounded then
       vvel = 0.08
       grounded = false
     end
