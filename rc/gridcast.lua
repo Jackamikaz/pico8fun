@@ -198,7 +198,7 @@ function drawwall(x1, y1, x2, y2, z1, z2, sp)
     if sp==1 then
       tline(x,y1b,  x,y1+y1b%1,  u*2,4,  0,(z1-z2)/(y1-y1b)*2)
     else
-      sspr((sp%16+u)*8,flr(sp/16)*8,1,8,x,y1b,1,y1-flr(y1b))
+      sspr((sp%16+u)*8,sp\16*8,1,8,x,y1b,1,y1-flr(y1b))
     end
     --line(x,y1,x,y1b)
 

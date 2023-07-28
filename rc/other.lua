@@ -192,7 +192,7 @@ function disperscan(func)
   local dx,dy = unpack(firstfire[flr((cam_dir+1/16)%1*8)+1])
   local tri = {expandtriangle(0.71,cam_x,cam_y,getfarsegment())}
 
-  local sx,sy = flr(cam_x)+0.5,flr(cam_y)+0.5
+  local sx,sy = middle(cam_x,cam_y)
   while not disperscanfire(func,sx,sy,dx,dy,tri,1) do
     sx += dx sy += dy
   end

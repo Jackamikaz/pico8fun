@@ -7,13 +7,15 @@ end
 
 flatcellcount = 0
 function drawflatcell(x,y)
-  map(x,y,x*8,y*8,1,1)
-
-  --x,y = x*8,y*8
-  --rectfill(x,y,x+8,y+8,7)
-  --rect(x,y,x+8,y+8,0)
-  --print(flatcellcount,x+1,y+2,1)
-  --flatcellcount += 1
+  if btn(❎) then
+    x,y = x*8,y*8
+    rectfill(x,y,x+8,y+8,7)
+    rect(x,y,x+8,y+8,0)
+    print(flatcellcount,x+1,y+2,1)
+    flatcellcount += 1
+  else
+    map(x,y,x*8,y*8,1,1)
+  end
 end
 
 function _update()
@@ -30,22 +32,14 @@ function() -- 2D DRAW ------------------------------
   --map(cx, cy, flr(cx) * 8, flr(cy) * 8, 17, 17)
   
   flatcellcount = 0
-  local tri = disperscan(drawflatcell)
+  disperscan(drawflatcell)
   player:draw()
 
-  if btn(🅾️) then
+  if btn(❎) then
     local px,py,xl,yl,xr,yr = cam_x,cam_y, getfarsegment()
     px*=8 py*=8 xl*=8 yl*=8 xr*=8 yr*=8
 
-    color(7)
-    line(xl,yl,xr,yr)
-    line(px,py,xl,yl)
-    line(px,py,xr,yr)
-
-    px,py,xl,yl,xr,yr = unpack(tri)
-    px*=8 py*=8 xl*=8 yl*=8 xr*=8 yr*=8
-
-    color(7)
+    color(8)
     line(xl,yl,xr,yr)
     line(px,py,xl,yl)
     line(px,py,xr,yr)
@@ -70,12 +64,15 @@ currentdraw = 3
 function _draw()
   cls()
 
-  --if btnp(❎) then
-  --  currentdraw = (currentdraw + 1) % #drawmethods + 1
-  --end
+  if btnp(🅾️) then
+    currentdraw = (currentdraw + 1) % #drawmethods + 1
+  end
 
   drawmethods[currentdraw]()
 
   --camera(0,0)
   --spr(32,stat(32),stat(33))
 end
+
+printh(3/2)
+printh(3\2)

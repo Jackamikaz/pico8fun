@@ -27,10 +27,10 @@ function raycast()
       local m = mr.walls[7] or 1
       local depthfactor = antiFishEye[x] * projplanedist / d
       local walltop = -(1-cam_z) * depthfactor
-      sspr((m%16 + c)*8,flr(m/16)*8,1,8,x,walltop+1,1,depthfactor + walltop%1)
+      sspr((m%16 + c)*8,m\16*8,1,8,x,walltop+1,1,depthfactor + walltop%1)
 
       --local halfwall = flr(antiFishEye[x] * 0.5 * projplanedist / d)
-      --sspr((m%16 + c)*8,flr(m/16)*8,1,8,x,-halfwall+1,1,halfwall*2)
+      --sspr((m%16 + c)*8,m\16*8,1,8,x,-halfwall+1,1,halfwall*2)
     end
   end
 end

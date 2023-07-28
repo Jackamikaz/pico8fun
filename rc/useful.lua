@@ -27,7 +27,7 @@ end
 function addordered(t,v,ordfunc)
   local l,h = 1,#t
   while l <= h do
-    local m = flr(l+(h-l)/2)
+    local m = l+(h-l)\2
     if ordfunc(t[m],v) then
       l = m+1
     else

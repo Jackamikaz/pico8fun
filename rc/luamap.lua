@@ -96,7 +96,7 @@ function buildluamap()
     if fget(i) == 0 then
       rectfill(0,0,7,7,0)
       spr(i,0,0)
-      local x,y = i*8%128,flr(i/16)*8
+      local x,y = i*8%128,i\16*8
       rectfill(x,y,x+7,y+7,0)
       sspr(4,4,4,4,x  ,y  )
       sspr(0,4,4,4,x+4,y  )
@@ -108,7 +108,7 @@ function buildluamap()
 
   -- set the map for "tline'ing the sprite sheet"
   for i=0,127 do
-    local x,y = i*2%128,flr(i/64)*2
+    local x,y = i*2%128,i\64*2
     mset(x,y,i)
     mset(x+1,y,i)
     mset(x,y+1,i)
