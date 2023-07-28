@@ -1,31 +1,35 @@
+function luamapset(x,y,v)
+  luamap[x | y << 8] = v
+end
+
 function buildluamap()
-  luamap = {}
+  luamap = setmetatable({},{__call = function(self,x,y) return self[x | y << 8] end})
 
   for y = 0,63 do
     for x = 0,127 do
       local m = mget(x,y)
       -- ladder on [10,5]
       if x==10 and y==5 then
-        luamap[x | y << 8] = {walls={x+0.1,y+1,0,x+0.1,y,1,20}, floors={m,0}}
+        luamapset(x,y,{walls={x+0.1,y+1,x+0.1,y,0,1,20}, floors={m,0}})
       elseif fget(m, 0) then
         local w = {}
         local h = 1
         if (m==1) h=2 --high walls
         if not fget(mget(x-1,y),0) then
-          append(w,x,y,0,x,y+1,h,m)
+          append(w,x,y,x,y+1,0,h,m)
         end
         if not fget(mget(x+1,y),0) then
-          append(w,x+1,y+1,0,x+1,y,h,m)
+          append(w,x+1,y+1,x+1,y,0,h,m)
         end
         if not fget(mget(x,y-1),0) then
-          append(w,x+1,y,0,x,y,h,m)
+          append(w,x+1,y,x,y,0,h,m)
         end
         if not fget(mget(x,y+1),0) then
-          append(w,x,y+1,0,x+1,y+1,h,m)
+          append(w,x,y+1,x+1,y+1,0,h,m)
         end
-        luamap[x | y << 8] = {walls=w}
+        luamapset(x,y,{walls=w,solid=true})
       elseif m~=0 then
-        luamap[x | y << 8] = {floors={m,0}}
+        luamapset(x,y,{floors={m,0}})
       end
     end
   end
@@ -33,12 +37,12 @@ function buildluamap()
   -- roof test for wood cabin
   --local roof = {5,1}
   local function setroof(x,y,z)
-    local lm = luamap[x | y << 8]
+    local lm = luamap(x,y)
     if (not lm) lm = {}
     local floors = lm.floors or {}
     append(floors,5,z)
     lm.floors = floors
-    luamap[x | y << 8] = lm
+    luamapset(x,y,lm)
   end
 
   for x=5,9 do
@@ -46,6 +50,10 @@ function buildluamap()
       setroof(x,y,1)    
     end
   end
+
+  setroof(3,7,1)
+  setroof(5,7,1)
+  setroof(3,9,1)
   
   -- stress test
   --for i=0.1,1,0.1 do
@@ -84,3 +92,4 @@ function buildluamap()
     end
   end
 end
+

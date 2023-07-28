@@ -7,11 +7,11 @@ fadepal = {
   
 -- sets a darkened palette depending on distance
 function pald(d)
-  if d > 8 then
+  if d > cam_far then
     pal(fadepal[4])
-  elseif d > 7 then
+  elseif d > cam_far-1 then
     pal(fadepal[3])
-  elseif d > 5 then
+  elseif d > cam_far-2 then
     pal(fadepal[2])
   else
     pal()

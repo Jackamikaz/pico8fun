@@ -137,7 +137,7 @@ function floortrapeze(l,r,lt,rt,y1,y2,alt,ox,oy)
   end
 end
 
-function drawwall(x1, y1, z1, x2, y2, z2, sp)
+function drawwall(x1, y1, x2, y2, z1, z2, sp)
   -- cut the line to stay in front of the camera
   --pretransformed by the caller now
   --x1,y1 = worldtocam(x1,y1)
@@ -209,7 +209,7 @@ function drawwall(x1, y1, z1, x2, y2, z2, sp)
 end
 
 function draw3Dcell(x,y)
-  local lm = luamap[x | y << 8]
+  local lm = luamap(x,y)
   if lm then
     local f = lm.floors
     if f then
@@ -221,11 +221,11 @@ function draw3Dcell(x,y)
     if w then
       local ord = {}
       for i=1,#w,7 do
-        local x1,y1,z1,x2,y2,z2,m = unpack(w,i,i+6)
+        local x1,y1,x2,y2,z1,z2,m = unpack(w,i,i+6)
         x1,y1 = worldtocam(x1,y1)
         x2,y2 = worldtocam(x2,y2)
         local d = y1+y2--no need to divide by 2, the comparison is still correct
-        addordered(ord,{d,x1,y1,z1,x2,y2,z2,m},
+        addordered(ord,{d,x1,y1,x2,y2,z1,z2,m},
           function(a,b)
             return a[1] > b[1]
           end)

@@ -63,7 +63,7 @@ end,
 function() -- MY "GRIDCASTING" ------------------------------
   camera(-64,-64)
 
-  cam_z = 0.5--1+sin(t()/3)*0.5
+  --cam_z = 0.5--1+sin(t()/3)*0.5
   disperscan(draw3Dcell)
 end}
 

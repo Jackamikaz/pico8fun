@@ -2,7 +2,7 @@ function setupcamera(startx, starty, startz, startdir)
   cam_x = startx
   cam_y = starty
   cam_z = startz
-  cam_far = 8
+  cam_far = 6
   cam_near = 0.085
   setcamdir(startdir)
 end

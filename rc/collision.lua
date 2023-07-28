@@ -20,6 +20,11 @@ function lineintersection(x1, y1, x2, y2, x3, y3, x4, y4)
   --end
 end
 
+--squared distance between a point and a line
+function sqrlinedist(px, py, x1, y1, x2, y2)
+  return sqrdst(px,py,lineintersection(x1,y1,x2,y2,px,py,px+y1-y2,py-x1+x2))
+end
+
 function raydda(px, py, rx, ry, md)
   local x2,y2 = px+rx,py+ry
   --[[
@@ -63,8 +68,8 @@ function raydda(px, py, rx, ry, md)
     end
 
     --local m = mget(mx, my)
-    local m = luamap[mx | my << 8]
-    if m then
+    local m = luamap(mx,my)
+    if m and m.solid then
       if m.x1 then
         local cx,cy = lineintersection(px,py,x2,y2,m.x1,m.y1,m.x2,m.y2)
         if cx and cx >= mx and cx <= mx + 1 and cy >= my and cy <= my + 1 then
