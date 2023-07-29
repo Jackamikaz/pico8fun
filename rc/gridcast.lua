@@ -114,6 +114,7 @@ function drawfloortile(fx, fy, fz, s)
 end
 
 function floortrapeze(l,r,lt,rt,y1,y2,alt,ox,oy)
+  if (y1==y2) return
   local s=sgn(y2-y1)
   lt,rt=(lt-l)/(y2-y1)*s,(rt-r)/(y2-y1)*s
   
