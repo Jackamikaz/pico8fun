@@ -1,10 +1,3 @@
-function _init()
-  setupcamera()
-  setfov(0.2222)
-  buildluamap()
-  poke(0x5f2d, 1) --enable mouse
-end
-
 flatcellcount = 0
 function drawflatcell(x,y)
   if btn(❎) then
@@ -16,11 +9,6 @@ function drawflatcell(x,y)
   else
     map(x,y,x*8,y*8,1,1)
   end
-end
-
-function _update()
-  player:update()
-  player:copytocam()
 end
 
 drawmethods = {
@@ -61,18 +49,48 @@ end}
 
 currentdraw = 3
 
-function _draw()
+modes = {
+play={update=function()
+  player:update()
+  player:copytocam()
+end,
+draw=function()
   cls()
-
   if btnp(🅾️) then
     currentdraw = (currentdraw + 1) % #drawmethods + 1
   end
 
   drawmethods[currentdraw]()
+end,
+fps=30},
+edit={update=editorupdate,
+draw=editordraw,
+fps=60}
+}
 
-  --camera(0,0)
-  --spr(32,stat(32),stat(33))
+function switchmode(mode)
+  local fps = mode.fps
+  _set_fps(fps)
+  if fps == 30 then
+    _update = mode.update
+    _update60 = nil
+  else
+    _update = nil
+    _update60 = mode.update
+  end
+  _draw = mode.draw
 end
 
-printh(3/2)
-printh(3\2)
+function _init()
+  setupcamera()
+  setfov(0.2222)
+  buildluamap()
+  poke(0x5f2d, 1) --enable mouse
+  local i = 1
+  for n,v in pairs(modes) do
+    menuitem(i,n,function() switchmode(v) end)
+    i += 1
+  end
+
+  switchmode(modes.edit)
+end

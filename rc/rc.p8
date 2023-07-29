@@ -14,6 +14,7 @@ __lua__
 #include raycast.lua
 #include disperscan.lua
 #include gridcast.lua
+#include editor.lua
 #include main.lua
 
 __gfx__
