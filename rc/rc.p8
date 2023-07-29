@@ -3,8 +3,9 @@ version 41
 __lua__
 --gridcast project?
 --proof of concept
-#include useful.lua
 #include vector.lua
+#include useful.lua
+#include input.lua
 #include collision.lua
 #include math.lua
 #include player.lua

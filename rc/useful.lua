@@ -11,11 +11,6 @@ function rndpal()
   end
 end
 
---button press as number
-function btnn(b)
-  return btn(b) and 1 or 0
-end
-
 --add several values to a table
 function append(t,...)
   for _,v in ipairs({...}) do

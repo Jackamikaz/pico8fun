@@ -18,7 +18,8 @@ function newvector(a, b)
       self.y /= len
     end,
     copy=function(_ENV,r)
-      return newvector(x, y)
+      x = r.x
+      y = r.y
     end,
     unpack=function(_ENV)
       return x,y
