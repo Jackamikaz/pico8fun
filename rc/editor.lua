@@ -1,11 +1,22 @@
-
-
 editcam = newvector()
+
+--printh(escbin(sprtop8scii(3)),"@clip")
+icons = {
+  arrow = "ᶜ1⁶.²⁵\9■!」◀\0⁸ᶜ7⁶.\0²⁶ᵉ゛⁶⁸\0",
+  grab = "ᶜ1⁶.⁘*CAB<\0\0⁸ᶜ7⁶.\0T<><\0\0\0",
+  finger = "ᶜ1⁶.⁴\10\10+BAB<⁸ᶜ7⁶.\0⁴⁴T=><\0"
+}
+
+printh(chr(0b110000))
 
 function editorupdate()
   mousesupport()
 
-  if (mbtn(2)) editcam -= getrelmouse()
+  cursor = icons.arrow
+  if mbtn(2) then
+    editcam -= getrelmouse()
+    cursor = icons.grab
+  end
 end
 
 function editordraw()
@@ -33,5 +44,7 @@ function editordraw()
   end
 
   camera(0,0)
-  spr(32,mousepos:unpack())
+  ?cursor,mousepos:unpack()
+
+  
 end
