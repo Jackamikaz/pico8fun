@@ -25,6 +25,11 @@ function editorupdate()
   mousesupport()
 
   cursor = icarrw
+
+  local x,y = ((editcam+mousepos)/8):flr():unpack()
+  local lm = luamap(x,y)
+  local f = lm and lm.floors
+
   if mbtn(2) then
     editcam -= getrelmouse()
     cursor = icgrab
@@ -37,16 +42,36 @@ function editorupdate()
   elseif mousepos.y > 95 then
     if (mbtnp(0)) editspr = edittab*64 + mousepos.x\8 + (mousepos.y-96)\8*16
   elseif mbtn(0) then
-    local lm = luamap(((editcam+mousepos)/8):flr():unpack())
-    local f = lm and lm.floors
+    if not f and editspr~=-1 then
+      lm = lm or {}
+      lm.floors = {{cam_z,editspr}}
+      luamapset(x,y,lm)
+    else
+      local insert=1
+      for i,v in ipairs(f) do
+        if v[1]==cam_z then
+          insert = nil
+          if editspr == -1 then
+            deli(f,i)
+            if (#f==0) lm.floors=nil
+          else
+            v[2] = editspr
+          end
+          break
+        elseif v[1] > cam_z then
+          break
+        end
+        insert = i
+      end
+      if insert and editspr~=-1 then
+        add(f,{cam_z,editspr},insert+1)
+      end
+    end
+  elseif mbtn(1) then
+    editspr=-1
     for i,v in ipairs(f) do
       if v[1]==cam_z then
-        if editspr == -1 then
-          deli(f,i)
-        else
-          v[2] = editspr
-        end
-        break
+        editspr = v[2]
       end
     end
   end
@@ -56,7 +81,7 @@ end
 
 function topdowndepth(d)
   d=cam_z-d
-  if (not isvalbetween(d,0,2)) return false
+  if (not isvalbetween(d,0,2)) return
   if d==0 then
     pal()
   elseif d<1 then
@@ -109,10 +134,11 @@ function editordraw()
   end
 
   camera(0,0)
+  palt(0,false)
 
   -- spritesheet
   local edittab64=edittab*64
-  rectfill(0,96,127,127,0)
+  --rectfill(0,96,127,127,0)
   for y=0,3 do
     for x=0,15 do
       spr(edittab64+y*16+x,x*8,96+y*8)
@@ -131,6 +157,13 @@ function editordraw()
     rectfill(0,85,127,95,5)
     ?icrayn,9,87,editspr~=-1 and 7 or 13
     ?icross,20,87,editspr==-1 and 7 or 13
+    if editspr~=-1 then
+      rectfill(79,88,91,94,6)
+      local str=tostr(editspr)
+      while #str<3 do str="0"..str end
+      ?str,80,89,13
+      spr(editspr,70,87)
+    end
     for i=0,3 do
       local x=96+i*8
       local t = edittab == i
@@ -139,8 +172,9 @@ function editordraw()
     end
   
   -- info and mouse
-  ?"z: "..flr(cam_z).."."..(cam_z%1*8),2,2,7
+  --?"z: "..flr(cam_z).."."..(cam_z%1*8),2,2,7
+  ?"z: "..cam_z,2,2,7
   ?cursor,mousepos:unpack()
 
-  
+  palt()
 end
