@@ -10,26 +10,26 @@ function buildluamap()
       local m = mget(x,y)
       -- ladder on [10,5]
       if x==10 and y==5 then
-        luamapset(x,y,{walls={x+0.1,y+1,x+0.1,y,0,1,20}, floors={0,m}})
+        luamapset(x,y,{walls={{x+0.1,y+1,x+0.1,y,0,1,20}}, floors={{0,m}}})
       elseif fget(m, 0) then
         local w = {}
         local h = 1
         if (m==1) h=2 --high walls
         if not fget(mget(x-1,y),0) then
-          append(w,x,y,x,y+1,0,h,m)
+          add(w,{x,y,x,y+1,0,h,m})
         end
         if not fget(mget(x+1,y),0) then
-          append(w,x+1,y+1,x+1,y,0,h,m)
+          add(w,{x+1,y+1,x+1,y,0,h,m})
         end
         if not fget(mget(x,y-1),0) then
-          append(w,x+1,y,x,y,0,h,m)
+          add(w,{x+1,y,x,y,0,h,m})
         end
         if not fget(mget(x,y+1),0) then
-          append(w,x,y+1,x+1,y+1,0,h,m)
+          add(w,{x,y+1,x+1,y+1,0,h,m})
         end
         luamapset(x,y,{walls=w,solid=true})
       elseif m~=0 then
-        luamapset(x,y,{floors={0,m}})
+        luamapset(x,y,{floors={{0,m}}})
       end
     end
   end
@@ -39,7 +39,7 @@ function buildluamap()
   local function setroof(x,y,z,s)
     local lm = luamap(x,y) or {}
     local floors = lm.floors or {}
-    append(floors,z,s)
+    add(floors,{z,s})
     lm.floors = floors
     luamapset(x,y,lm)
   end
@@ -58,13 +58,13 @@ function buildluamap()
 
     local z1 = z-0.25
 
-    append(floors,z1,17)
-    append(floors,z,17)
+    add(floors,{z1,17})
+    add(floors,{z,17})
 
-    append(walls,x,y,x,y+1,z1,z,17)
-    append(walls,x+1,y+1,x+1,y,z1,z,17)
-    append(walls,x+1,y,x,y,z1,z,17)
-    append(walls,x,y+1,x+1,y+1,z1,z,17)
+    add(walls,{x,y,x,y+1,z1,z,17})
+    add(walls,{x+1,y+1,x+1,y,z1,z,17})
+    add(walls,{x+1,y,x,y,z1,z,17})
+    add(walls,{x,y+1,x+1,y+1,z1,z,17})
 
     lm.floors = floors
     lm.walls = walls

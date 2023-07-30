@@ -39,17 +39,14 @@ function editorupdate()
   elseif mbtn(0) then
     local lm = luamap(((editcam+mousepos)/8):flr():unpack())
     local f = lm and lm.floors
-    if f then
-      for i=1,#f,2 do
-        if f[i]==cam_z then
-          if editspr == -1 then
-            deli(f,i)
-            deli(f,i)
-          else
-            f[i+1] = editspr
-          end
-          break
+    for i,v in ipairs(f) do
+      if v[1]==cam_z then
+        if editspr == -1 then
+          deli(f,i)
+        else
+          v[2] = editspr
         end
+        break
       end
     end
   end
@@ -92,12 +89,9 @@ function editordraw()
   for x=ex,ex+16 do
     for y=ey,ey+16 do
       local lm=luamap(x,y)
-      local f = lm and lm.floors
-      if f then
-        for i=1,#f,2 do
-          local z,m = unpack(f,i,i+1)
-          if (topdowndepth(z)) spr(m,x*8,y*8)
-        end
+      for _,v in ipairs(lm and lm.floors) do
+        local z,m = unpack(v)
+        if (topdowndepth(z)) spr(m,x*8,y*8)
       end
     end
   end
@@ -107,12 +101,9 @@ function editordraw()
   for x=ex,ex+16 do
     for y=ey,ey+16 do
       local lm=luamap(x,y)
-      local w = lm and lm.walls
-      if  w then
-        for i=1,#w,7 do
-          local x1,y1,x2,y2,z1,z2,m = unpack(w,i,i+6)
-          if (isvalbetween(cam_z,z1,z2)) line(x1*8,y1*8,x2*8,y2*8,7)
-        end
+      for _,v in ipairs(lm and lm.walls) do
+        local x1,y1,x2,y2,z1,z2,m = unpack(v)
+        if (isvalbetween(cam_z,z1,z2)) line(x1*8,y1*8,x2*8,y2*8,7)
       end
     end
   end

@@ -12,11 +12,11 @@ function rndpal()
 end
 
 --add several values to a table
-function append(t,...)
-  for _,v in ipairs({...}) do
-    add(t,v)
-  end
-end
+--function append(t,...)
+--  for _,v in ipairs({...}) do
+--    add(t,v)
+--  end
+--end
 
 --quick binary search for adding a value to an ordered table
 function addordered(t,v,ordfunc)

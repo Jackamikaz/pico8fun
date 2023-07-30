@@ -215,34 +215,32 @@ function draw3Dcell(x,y)
     local f = lm.floors
     if f then
       local middle = 0x7fff
-      for i=1,#f,2 do
-        local z = f[i]
+      for i,v in ipairs(f) do
+        local z = v[1]
         if cam_z < z then
           middle = i
           break
         end
-        drawfloortile(x,y,z,f[i+1])
+        drawfloortile(x,y,z,v[2])
       end
-      for i=#f-1,middle,-1 do
-        drawfloortile(x,y,f[i],f[i+1])
+      for i=#f,middle,-1 do
+        local v = f[i]
+        drawfloortile(x,y,v[1],v[2])
       end
     end
-    local w = lm.walls
-    if w then
-      local ord = {}
-      for i=1,#w,7 do
-        local x1,y1,x2,y2,z1,z2,m = unpack(w,i,i+6)
-        x1,y1 = worldtocam(x1,y1)
-        x2,y2 = worldtocam(x2,y2)
-        local d = y1+y2--no need to divide by 2, the comparison is still correct
-        addordered(ord,{d,x1,y1,x2,y2,z1,z2,m},
-          function(a,b)
-            return a[1] > b[1]
-          end)
-      end
-      for _,w in ipairs(ord) do
-        drawwall(unpack(w,2,8))
-      end
+    local ord = {}
+    for _,v in ipairs(lm.walls) do
+      local x1,y1,x2,y2,z1,z2,m = unpack(v)
+      x1,y1 = worldtocam(x1,y1)
+      x2,y2 = worldtocam(x2,y2)
+      local d = y1+y2--no need to divide by 2, the comparison is still correct
+      addordered(ord,{d,x1,y1,x2,y2,z1,z2,m},
+        function(a,b)
+          return a[1] > b[1]
+        end)
+    end
+    for _,w in ipairs(ord) do
+      drawwall(unpack(w,2,8))
     end
   end
 end

@@ -24,7 +24,7 @@ function raycast()
         c = ty
       end
 
-      local m = mr.walls[7] or 1
+      local m = mr.walls[1][7] or 1
       local depthfactor = antiFishEye[x] * projplanedist / d
       local walltop = -(1-cam_z) * depthfactor
       sspr((m%16 + c)*8,m\16*8,1,8,x,walltop+1,1,depthfactor + walltop%1)
