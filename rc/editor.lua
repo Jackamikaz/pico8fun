@@ -1,8 +1,14 @@
 editcam = newvector()
 edittab = 0
 editspr = 0
+editbig = false
+editmod = 1 -- 1 for floors, 2 for walls
 
-printh(escbin(sprtop8scii(48)),"@clip")
+--[[local str=""
+for s=48,51 do
+  str ..= "\""..escbin(sprtop8scii(s)).."\"\r"
+end
+printh(str,"@clip")]]
 icarrw = "ᶜ1⁶.²⁵\9■!」◀\0⁸ᶜ7⁶.\0²⁶ᵉ゛⁶⁸\0"
 icgrab = "ᶜ1⁶.⁘*CAB<\0\0⁸ᶜ7⁶.\0T<><\0\0\0"
 icfngr = "³eᶜ1⁶.⁴\10\10+BAB<⁸ᶜ7⁶.\0⁴⁴T=><\0"
@@ -12,6 +18,22 @@ ictab2 = "⁶.\0>co{c○○⁸ᶜd⁶.\0\0、▮⁴、\0\0"
 ictab3 = "⁶.\0>cgoc○○⁸ᶜd⁶.\0\0、「▮、\0\0"
 icross = "⁶.\"w>、>w\"\0"
 icrayn = "⁶.▮8|>。	⁷\0"
+icsprs = "⁶.?!?\0‖*\0\0"
+icexpd = "⁶.?!!!!?\0\0"
+icwall = "⁶.p~~~~ᵉ\0\0"
+icflor = "⁶.\0、○◜|「\0\0"
+
+editbtn = {}
+function addeditbtn(n,x,y,ic,func)
+  editbtn[n] = {x,y,x+6,y+6,ic,func}
+end
+
+addeditbtn("small",5,1,icsprs,function() editbig=false end)
+addeditbtn("big",13,1,icexpd,function() editbig=true end)
+addeditbtn("draw",9,87,icrayn,del)
+addeditbtn("del",20,87,icross,function() editspr=-1 end)
+addeditbtn("floor",108,1,icflor,function() editmod=1 end)
+addeditbtn("wall",118,1,icwall,function() editmod=2 end)
 
 function isvalbetween(v,a,b)
   return mid(v,a,b) == v
@@ -30,52 +52,70 @@ function editorupdate()
   local lm = luamap(x,y)
   local f = lm and lm.floors
 
-  if mbtn(2) then
-    editcam -= getrelmouse()
-    cursor = icgrab
-  elseif isvecinrect(mousepos,96,86,127,95) then
-    cursor = icfngr
-    if (mbtnp(0)) edittab = (mousepos.x-96)\8
-  elseif isvecinrect(mousepos,20,86,27,95) then
-    cursor = icfngr
-    if (mbtnp(0)) editspr = -1
-  elseif mousepos.y > 95 then
-    if (mbtnp(0)) editspr = edittab*64 + mousepos.x\8 + (mousepos.y-96)\8*16
-  elseif mbtn(0) then
-    if not f and editspr~=-1 then
-      lm = lm or {}
-      lm.floors = {{cam_z,editspr}}
-      luamapset(x,y,lm)
-    else
-      local insert=1
-      for i,v in ipairs(f) do
-        if v[1]==cam_z then
-          insert = nil
-          if editspr == -1 then
-            deli(f,i)
-            if (#f==0) lm.floors=nil
-          else
-            v[2] = editspr
-          end
-          break
-        elseif v[1] > cam_z then
-          break
-        end
-        insert = i
-      end
-      if insert and editspr~=-1 then
-        add(f,{cam_z,editspr},insert+1)
-      end
-    end
-  elseif mbtn(1) then
-    editspr=-1
-    for i,v in ipairs(f) do
-      if v[1]==cam_z then
-        editspr = v[2]
-      end
+
+  for _,v in pairs(editbtn) do
+    if (not editbig or v[2] < 8) and isvecinrect(mousepos,unpack(v)) then
+      cursor = icfngr
+      if (mbtnp(0)) v[6]()
+      break
     end
   end
 
+  if mousepos.y < 8 then
+  elseif mbtn(2) then -- grab and pan scene
+    editcam -= getrelmouse()
+    cursor = icgrab
+  elseif isvalbetween(mousepos.y,85,95) and not editbig then -- select spritesheet
+    if mousepos.x > 95 then
+      cursor = icfngr
+      if (mbtnp(0)) edittab = (mousepos.x-96)\8
+    end
+  elseif mousepos.y > 95 and not editbig then -- select sprite
+    if (mbtnp(0)) editspr = edittab*64 + mousepos.x\8 + (mousepos.y-96)\8*16
+  elseif editmod == 1 then
+    if mbtn(0) and editmod == 1 then -- add or remove floor
+      if not f and editspr~=-1 then
+        lm = lm or {}
+        lm.floors = {{cam_z,editspr}}
+        luamapset(x,y,lm)
+      else
+        local insert=1
+        for i,v in ipairs(f) do
+          if v[1]==cam_z then
+            insert = nil
+            if editspr == -1 then
+              deli(f,i)
+              if (#f==0) lm.floors=nil
+            else
+              v[2] = editspr
+            end
+            break
+          elseif v[1] > cam_z then
+            break
+          end
+          insert = i
+        end
+        if insert and editspr~=-1 then
+          add(f,{cam_z,editspr},insert+1)
+        end
+      end
+    elseif mbtn(1) then -- copy floor
+      editspr=-1
+      for i,v in ipairs(f) do
+        if v[1]==cam_z then
+          editspr = v[2]
+        end
+      end
+    end
+  elseif editmod==2 then -- edit walls
+  end
+
+  editbtn.small.on = not editbig
+  editbtn.big.on = editbig
+  editbtn.draw.on = editspr~=-1
+  editbtn.del.on = editspr==-1
+  editbtn.floor.on = editmod==1
+  editbtn.wall.on = editmod==2
   cam_z = flr(cam_z*8)/8 - mwhl/8
 end
 
@@ -136,27 +176,28 @@ function editordraw()
   camera(0,0)
   palt(0,false)
 
-  -- spritesheet
-  local edittab64=edittab*64
-  --rectfill(0,96,127,127,0)
-  for y=0,3 do
-    for x=0,15 do
-      spr(edittab64+y*16+x,x*8,96+y*8)
+  if not editbig then
+    -- spritesheet
+    local edittab64=edittab*64
+    --rectfill(0,96,127,127,0)
+    for y=0,3 do
+      for x=0,15 do
+        spr(edittab64+y*16+x,x*8,96+y*8)
+      end
     end
-  end
 
-  -- selected sprite
-  if isvalbetween(editspr,edittab64,edittab64+63) then
-    local s = editspr-edittab64
-    local x,y = s%16*8,s\16*8+96
-    rect(x-1,y-1,x+8,y+8,7)
-    rect(x-2,y-2,x+9,y+9,0)
-  end
+    -- selected sprite
+    if isvalbetween(editspr,edittab64,edittab64+63) then
+      local s = editspr-edittab64
+      local x,y = s%16*8,s\16*8+96
+      rect(x-1,y-1,x+8,y+8,7)
+      rect(x-2,y-2,x+9,y+9,0)
+    end
 
     -- tools and tabs
     rectfill(0,85,127,95,5)
-    ?icrayn,9,87,editspr~=-1 and 7 or 13
-    ?icross,20,87,editspr==-1 and 7 or 13
+    --?icrayn,9,87,editspr~=-1 and 7 or 13
+    --?icross,20,87,editspr==-1 and 7 or 13
     if editspr~=-1 then
       rectfill(79,88,91,94,6)
       local str=tostr(editspr)
@@ -170,10 +211,22 @@ function editordraw()
       ?_ENV["ictab"..i],x,88-tonum(t),t and 7 or 6
       line(x,95,x+6,95,t and 6 or 13)
     end
+  end
+
+  -- top band
+  rectfill(0,0,127,7,8)
+
+  -- edit buttons
+  for _,v in pairs(editbtn) do
+    if v[2] < 8 or not editbig then
+      local x,y,_,_,i = unpack(v)
+      ?i,x,y,v.on and 7 or 13
+    end
+  end
   
   -- info and mouse
   --?"z: "..flr(cam_z).."."..(cam_z%1*8),2,2,7
-  ?"z: "..cam_z,2,2,7
+  ?"z: "..cam_z,25,2,7
   ?cursor,mousepos:unpack()
 
   palt()
