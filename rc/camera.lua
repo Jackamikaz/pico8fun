@@ -1,10 +1,10 @@
-function setupcamera(startx, starty, startz, startdir)
-  cam_x = startx
-  cam_y = starty
-  cam_z = startz
+function setupcamera()
+  cam_x = 0
+  cam_y = 0
+  cam_z = 0
   cam_far = 6
   cam_near = 0.085
-  setcamdir(startdir)
+  setcamdir()
 end
 
 function setcamdir(newdir)

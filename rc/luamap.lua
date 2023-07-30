@@ -56,7 +56,7 @@ function buildluamap()
     local floors = lm.floors or {}
     local walls = lm.walls or {}
 
-    local z1 = z-0.2
+    local z1 = z-0.25
 
     append(floors,z1,17)
     append(floors,z,17)
@@ -72,16 +72,16 @@ function buildluamap()
     luamapset(x,y,lm)
   end
 
-  addplatform(5,7,1.3)
-  addplatform(5,9,1.6)
-  addplatform(7,9,1.9)
-  addplatform(9,9,2.2)
-  addplatform(9,7,2.5)
-  addplatform(9,5,2.8)
+  addplatform(5,7,1.125)
+  addplatform(5,9,1.5)
+  addplatform(7,9,1.750)
+  addplatform(9,9,2)
+  addplatform(9,7,2.250)
+  addplatform(9,5,2.5)
   
   for x=8,10 do
     for y=3,4 do
-      setroof(x,y,2.8,17)    
+      setroof(x,y,2.5,17)    
     end
   end
 

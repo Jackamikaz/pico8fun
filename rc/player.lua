@@ -56,7 +56,7 @@ function player.update(_ENV)
   if not touchingladder then
     vvel -= 0.01
     if btnp(❎) and grounded then
-      vvel = 0.08
+      vvel = 0.085
       grounded = false
     end
     alt += vvel

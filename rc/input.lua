@@ -13,6 +13,7 @@ function mousesupport()
   currentmousestate = stat(34)
   lastmousepos:copy(mousepos)
   mousepos:set(stat(32),stat(33))
+  mwhl = stat(36)
 end
 
 function mbtn(mb)
@@ -20,7 +21,7 @@ function mbtn(mb)
 end
 
 function mbtnp(mb)
-  return (currentmousestate & lastmousestate & 1 << mb) ~= 0
+  return (currentmousestate & 1 << mb) ~= 0 and (lastmousestate & 1 << mb) == 0
 end
 
 -- mouse position as a vector relative to screen position set by camera(x,y)
