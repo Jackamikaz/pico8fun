@@ -23,6 +23,9 @@ function newvector(a, b)
     end,
     unpack=function(_ENV)
       return x,y
+    end,
+    flr=function(_ENV)
+      return newvector(flr(x),flr(y))
     end
   },{
   __add=function(_ENV,r)

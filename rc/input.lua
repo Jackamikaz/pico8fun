@@ -24,11 +24,6 @@ function mbtnp(mb)
   return (currentmousestate & 1 << mb) ~= 0 and (lastmousestate & 1 << mb) == 0
 end
 
--- mouse position as a vector relative to screen position set by camera(x,y)
-function getlocalmouse()
-  return mousepos+newvector(peek2(0x5f28), peek2(0x5f2a))
-end
-
 function getrelmouse()
   return mousepos-lastmousepos
 end
