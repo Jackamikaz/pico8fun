@@ -48,7 +48,7 @@ function editorupdate()
 
   cursor = icarrw
 
-  local x,y = ((editcam+mousepos)/8):flr():unpack()
+  local x,y = ((editcam+mousepos)\8):unpack()
   local lm = luamap(x,y)
   local f = lm and lm.floors
 
@@ -109,7 +109,24 @@ function editorupdate()
     end
   elseif editmod==2 then -- edit walls
     if (mbtnp(0)) editwls = editcam + mousepos
-    if (not mbtn(0)) editwls = nil
+    if mbtn(0) then
+      local prvmap,newmap = editwls\8,(lastmousepos+editcam)\8
+      if prvmap~=newmap then
+        local l=(editcam+mousepos-editwls)/8
+        local ls=#l
+        l /= ls
+        raydda:start(editwls.x/8,editwls.y/8,l.x,l.y)
+        local c=0
+        repeat
+          raydda:next()
+          -- add wall here
+        until raydda.mx==newmap.x and raydda.my==newmap.y or raydda.d >=ls
+
+        editwls = editcam + mousepos
+      end
+    else
+      editwls = nil
+    end
   end
 
   editbtn.small.on = not editbig
@@ -172,12 +189,12 @@ function editordraw()
     end
   end
   pal()
+  fillp(editmod==1 and 0b1010010110100101.1 or 0)
   if editmod==2 then
     camera(0,0)
     grid()
     camera(editcam:unpack())
   end
-  fillp(editmod==1 and 0b1010010110100101.1 or 0)
 
   -- wall lines
   for y=ey,ey+16 do

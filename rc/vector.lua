@@ -9,13 +9,13 @@ function newvector(a, b)
     slen=function(_ENV)
       return abs(x * x + y * y)
     end,
-    unit=function()
+    unit=function(self)
       return self / #self
     end,
-    norm=function()
-      local len = #self
-      self.x /= len
-      self.y /= len
+    norm=function(_ENV)
+      local len = #_ENV
+      x /= len
+      y /= len
     end,
     copy=function(_ENV,r)
       x = r.x
@@ -24,9 +24,9 @@ function newvector(a, b)
     unpack=function(_ENV)
       return x,y
     end,
-    flr=function(_ENV)
-      return newvector(flr(x),flr(y))
-    end
+    --flr=function(_ENV)
+    --  return newvector(flr(x),flr(y))
+    --end
   },{
   __add=function(_ENV,r)
     return newvector(x + r.x, y + r.y)
@@ -40,11 +40,14 @@ function newvector(a, b)
   __div=function(_ENV,r)
     return newvector(x / r, y / r)
   end,
+  __idiv=function(_ENV,r)
+    return newvector(x \ r, y \ r)
+  end,
   __eq=function(_ENV,r)
     return x == r.x and y == r.y
   end,
-  __len=function()
-    return sqrt(self:slen())
+  __len=function(_ENV)
+    return sqrt(slen(_ENV))
   end,
   --dot product
   __pow=function(_ENV,r)

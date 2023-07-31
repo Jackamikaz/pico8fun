@@ -25,7 +25,54 @@ function sqrlinedist(px, py, x1, y1, x2, y2)
   return sqrdst(px,py,lineintersection(x1,y1,x2,y2,px,py,px+y1-y2,py-x1+x2))
 end
 
-function raydda(px, py, rx, ry, md)
+raydda = setmetatable({},{__index=_ENV})
+function raydda.start(_ENV, startx, starty, rayx, rayy)
+  px,py,rx,ry = startx, starty, rayx, rayy
+  x2,y2 = px+rx,py+ry
+  ux,uy = abs(1 / rx), abs(1 / ry)
+  mx,my = flr(px), flr(py)
+  --rl1x,rl1y,sx,sy
+
+  if rx < 0 then
+    sx = -1
+    lx = (px - mx) * ux
+  else
+    sx = 1
+    lx = (mx + 1 - px) * ux
+  end
+
+  if ry < 0 then
+    sy = -1
+    ly = (py - my) * uy
+  else
+    sy = 1
+    ly = (my + 1 - py) * uy
+  end
+
+  d = 0
+end
+
+function raydda.next(_ENV)
+  if lx < ly then
+    mx += sx
+    d = lx
+    lx += ux
+  else
+    my += sy
+    d = ly
+    ly += uy
+  end
+end
+
+function raydda.point(_ENV)
+  return px + rx * d, py + ry * d
+end
+
+function raydda.map(_ENV)
+  return luamap(mx,my)
+end
+
+--[[function raydda(px, py, rx, ry, md)
   local x2,y2 = px+rx,py+ry
   --[[
   px, py : player pos
@@ -34,7 +81,7 @@ function raydda(px, py, rx, ry, md)
   mx, my : map coord
   lx, ly : ray length 1D
   sx, sy : step X, step Y
-]]
+]
   local ux,uy = abs(1 / rx), abs(1 / ry)
   local mx,my = flr(px), flr(py)
   local rl1x,rl1y,sx,sy
@@ -81,4 +128,4 @@ function raydda(px, py, rx, ry, md)
       end
     end
   end
-end
+end]]

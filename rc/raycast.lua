@@ -11,9 +11,20 @@ end
 function raycast()
   for x=-64,63 do
     local raydir = cam_dir + rayDir[x]
-    local rx = cos(raydir)
-    local ry = sin(raydir)
-    local cx,cy,d,mr = raydda(cam_x, cam_y, rx, ry, cam_far)
+    --local rx = cos(raydir)
+    --local ry = sin(raydir)
+    --local cx,cy,d,mr = raydda(cam_x, cam_y, rx, ry, cam_far)
+    local d,cx,cy,mr = 0
+    raydda:start(cam_x,cam_y,cos(raydir),sin(raydir))
+    while d < cam_far do
+      raydda:next()
+      d = raydda.d
+      mr = raydda:map()
+      if mr and mr.walls then
+        cx,cy = raydda:point()
+        break
+      end
+    end
     if cx then
       local tx = abs(cx % 1)
       local ty = abs(cy % 1)
