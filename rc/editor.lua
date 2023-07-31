@@ -108,6 +108,8 @@ function editorupdate()
       end
     end
   elseif editmod==2 then -- edit walls
+    if (mbtnp(0)) editwls = editcam + mousepos
+    if (not mbtn(0)) editwls = nil
   end
 
   editbtn.small.on = not editbig
@@ -132,11 +134,7 @@ function topdowndepth(d)
   return true
 end
 
-function editordraw()
-  cls()
-
-  -- grid background
-  fillp(0b1010010110100101)
+function grid()
   color(1)
   for i=0,127,8 do
     local x=i+8-editcam.x%8
@@ -144,27 +142,46 @@ function editordraw()
     line(x,0,x,127)
     line(0,y,127,y)
   end
-  fillp()
+end
+
+function editordraw()
+  cls()
+
+  -- grid background
+  fillp(0b1010010110100101.11)
+  if editmod==1 then
+    grid()
+    fillp()
+  end
 
   -- floor tiles
   local ex,ey = editcam:unpack()
   camera(ex,ey)
   ex,ey = ex\8,ey\8
 
-  for x=ex,ex+16 do
-    for y=ey,ey+16 do
+  for y=ey,ey+16 do
+    for x=ex,ex+16 do
+      local sx,sy=x*8,y*8
       local lm=luamap(x,y)
       for _,v in ipairs(lm and lm.floors) do
         local z,m = unpack(v)
-        if (topdowndepth(z)) spr(m,x*8,y*8)
+        if topdowndepth(z) then
+          spr(m,sx,sy)
+        end
       end
     end
   end
   pal()
+  if editmod==2 then
+    camera(0,0)
+    grid()
+    camera(editcam:unpack())
+  end
+  fillp(editmod==1 and 0b1010010110100101.1 or 0)
 
   -- wall lines
-  for x=ex,ex+16 do
-    for y=ey,ey+16 do
+  for y=ey,ey+16 do
+    for x=ex,ex+16 do
       local lm=luamap(x,y)
       for _,v in ipairs(lm and lm.walls) do
         local x1,y1,x2,y2,z1,z2,m = unpack(v)
@@ -173,6 +190,9 @@ function editordraw()
     end
   end
 
+  if (editwls) line(editwls.x,editwls.y,(mousepos+editcam):unpack())
+
+  fillp()
   camera(0,0)
   palt(0,false)
 
