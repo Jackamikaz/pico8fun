@@ -13,7 +13,7 @@ end
 
 --add several values to a table
 --function append(t,...)
---  for _,v in ipairs({...}) do
+--  for v in all({...}) do
 --    add(t,v)
 --  end
 --end

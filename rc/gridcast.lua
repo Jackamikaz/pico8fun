@@ -229,7 +229,7 @@ function draw3Dcell(x,y)
       end
     end
     local ord = {}
-    for _,v in ipairs(lm.walls) do
+    for v in all(lm.walls) do
       local x1,y1,x2,y2,z1,z2,m = unpack(v)
       x1,y1 = worldtocam(x1,y1)
       x2,y2 = worldtocam(x2,y2)
@@ -239,7 +239,7 @@ function draw3Dcell(x,y)
           return a[1] > b[1]
         end)
     end
-    for _,w in ipairs(ord) do
+    for w in all(ord) do
       drawwall(unpack(w,2,8))
     end
   end

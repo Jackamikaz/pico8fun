@@ -42,7 +42,7 @@ function player.update(_ENV)
   end
 
   local ground = 0
-  for _,v in ipairs(lm and lm.floors) do
+  for v in all(lm and lm.floors) do
     local z = v[1]
     if alt < z then
       break

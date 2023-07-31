@@ -83,7 +83,7 @@ end
 
 function minx(...)
   local r = 0x7FFF.FFFF
-  for _,v in ipairs({...}) do
+  for v in all({...}) do
     if (v<r) r=v
   end
   return r
@@ -91,7 +91,7 @@ end
 
 function maxx(...)
   local r = 0x8000
-  for _,v in ipairs({...}) do
+  for v in all({...}) do
     if (v>r) r=v
   end
   return r

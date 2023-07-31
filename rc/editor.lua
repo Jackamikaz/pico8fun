@@ -101,7 +101,7 @@ function editorupdate()
       end
     elseif mbtn(1) then -- copy floor
       editspr=-1
-      for i,v in ipairs(f) do
+      for v in all(f) do
         if v[1]==cam_z then
           editspr = v[2]
         end
@@ -163,7 +163,7 @@ function editordraw()
     for x=ex,ex+16 do
       local sx,sy=x*8,y*8
       local lm=luamap(x,y)
-      for _,v in ipairs(lm and lm.floors) do
+      for v in all(lm and lm.floors) do
         local z,m = unpack(v)
         if topdowndepth(z) then
           spr(m,sx,sy)
@@ -183,7 +183,7 @@ function editordraw()
   for y=ey,ey+16 do
     for x=ex,ex+16 do
       local lm=luamap(x,y)
-      for _,v in ipairs(lm and lm.walls) do
+      for v in all(lm and lm.walls) do
         local x1,y1,x2,y2,z1,z2,m = unpack(v)
         if (isvalbetween(cam_z,z1,z2)) line(x1*8,y1*8,x2*8,y2*8,7)
       end
