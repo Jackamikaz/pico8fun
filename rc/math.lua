@@ -36,3 +36,7 @@ function sqrdst(x1,y1,x2,y2)
   if (r < 0) return 0x7fff.ffff
   return r
 end
+
+function isvalbetween(v,a,b)
+  return mid(v,a,b) == v
+end

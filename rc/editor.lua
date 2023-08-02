@@ -35,13 +35,24 @@ addeditbtn("del",20,87,icross,function() editspr=-1 end)
 addeditbtn("floor",108,1,icflor,function() editmod=1 end)
 addeditbtn("wall",118,1,icwall,function() editmod=2 end)
 
-function isvalbetween(v,a,b)
-  return mid(v,a,b) == v
+--[[
+local test = {1,2,3,4,5,6,7,8}
+
+local i=1
+while i<=#test do
+  local v=test[i]
+  printh("i is "..i)
+  if v==2 or v==3 or v==7 then
+    printh("deleting value "..v.." at index "..i)
+    deli(test,i)
+  else
+    i+=1
+  end
 end
 
-function isvecinrect(v,x1,y1,x2,y2)
-  return isvalbetween(v.x,x1,x2) and isvalbetween(v.y,y1,y2)
-end
+for v in all(test) do
+  printh(v)
+end]]
 
 function editorupdate()
   mousesupport()
@@ -96,7 +107,7 @@ function editorupdate()
           insert = i
         end
         if insert and editspr~=-1 then
-          add(f,{cam_z,editspr},insert+1)
+          add(f,{cam_z,editspr},insert)
         end
       end
     elseif mbtn(1) then -- copy floor
@@ -108,24 +119,62 @@ function editorupdate()
       end
     end
   elseif editmod==2 then -- edit walls
-    if (mbtnp(0)) editwls = editcam + mousepos
-    if mbtn(0) then
-      local prvmap,newmap = editwls\8,(lastmousepos+editcam)\8
-      if prvmap~=newmap then
-        local l=(editcam+mousepos-editwls)/8
-        local ls=#l
-        l /= ls
-        raydda:start(editwls.x/8,editwls.y/8,l.x,l.y)
-        local c=0
-        repeat
-          raydda:next()
-          -- add wall here
-        until raydda.mx==newmap.x and raydda.my==newmap.y or raydda.d >=ls
-
-        editwls = editcam + mousepos
+    local gridmouse,lastgridmouse = (editcam + mousepos)/8, (editcam + lastmousepos)/8
+    local prvmap,newmap = lastgridmouse\1,gridmouse\1
+    if editspr==-1 then
+      if mbtn(0) then
+        local function trydelwall(mx,my)
+          local lm=luamap(mx,my)
+          if lm and lm.walls then
+            local w,i = lm.walls,1
+            while i<=#w do
+              local v=w[i]
+              local a,b = newvector(unpack(v,1,2)),newvector(unpack(v,3,4))
+              if isvalbetween(cam_z,unpack(v,5,6)) and segmentstouch(a,b,gridmouse,lastgridmouse) then
+                deli(w,i)
+              else
+                i+=1
+              end
+            end
+            if #w == 0 then
+              lm.walls = nil
+              lm.solid = nil
+            end
+          end
+        end
+        trydelwall(prvmap:unpack())
+        if (prvmap~=newmap) trydelwall(newmap:unpack())
       end
     else
-      editwls = nil
+      if mbtnp(0) then
+        editwls = gridmouse
+        editwls.genbyclick = true
+      end
+      if mbtn(0) then
+        if prvmap~=newmap then
+          local l=gridmouse-lastgridmouse
+          local ls=#l
+          l /= ls
+          --printh("----------")
+          raydda:start(lastgridmouse.x,lastgridmouse.y,l.x,l.y)
+          repeat
+            local pmx,pmy = raydda.mx,raydda.my
+            raydda:next()
+            -- add wall here
+            local next = newvector(raydda:point())
+            if not editwls.editwls.genbyclick then
+              local lm = luamap(pmx,pmy) or {}
+              lm.walls = lm.walls or {}
+              add(lm.walls,{editwls.x,editwls.y,next.x,next.y,0,1,editspr})
+              luamapset(pmx,pmy,lm)
+            end
+            editwls = next
+            --printv("wx,wy",editwls.x,editwls.y)
+          until raydda.mx==newmap.x and raydda.my==newmap.y or raydda.d >=ls
+        end
+      else
+        editwls = nil
+      end
     end
   end
 
@@ -207,7 +256,7 @@ function editordraw()
     end
   end
 
-  if (editwls) line(editwls.x,editwls.y,(mousepos+editcam):unpack())
+  if (editwls) line(editwls.x*8,editwls.y*8,(mousepos+editcam):unpack())
 
   fillp()
   camera(0,0)

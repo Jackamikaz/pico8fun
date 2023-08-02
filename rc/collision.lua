@@ -28,10 +28,8 @@ end
 raydda = setmetatable({},{__index=_ENV})
 function raydda.start(_ENV, startx, starty, rayx, rayy)
   px,py,rx,ry = startx, starty, rayx, rayy
-  x2,y2 = px+rx,py+ry
   ux,uy = abs(1 / rx), abs(1 / ry)
   mx,my = flr(px), flr(py)
-  --rl1x,rl1y,sx,sy
 
   if rx < 0 then
     sx = -1

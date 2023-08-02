@@ -7,6 +7,7 @@ __lua__
 #include useful.lua
 #include input.lua
 #include collision.lua
+#include vectorcollision.lua
 #include math.lua
 #include player.lua
 #include camera.lua
