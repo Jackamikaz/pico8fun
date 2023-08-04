@@ -30,10 +30,10 @@ end
 
 addeditbtn("small",5,1,icsprs,function() editbig=false end)
 addeditbtn("big",13,1,icexpd,function() editbig=true end)
-addeditbtn("draw",9,87,icrayn,del)
-addeditbtn("del",20,87,icross,function() editspr=-1 end)
-addeditbtn("floor",108,1,icflor,function() editmod=1 end)
-addeditbtn("wall",118,1,icwall,function() editmod=2 end)
+addeditbtn("draw",5,88,icrayn,function() if (editspr<0) editspr=-editspr-1 end)
+addeditbtn("del",14,88,icross,function() if (editspr>=0) editspr=-editspr-1 end)
+addeditbtn("floor",35,88,icflor,function() editmod=1 end)
+addeditbtn("wall",44,88,icwall,function() editmod=2 end)
 
 --[[
 local test = {1,2,3,4,5,6,7,8}
@@ -76,7 +76,7 @@ function editorupdate()
   elseif mbtn(2) then -- grab and pan scene
     editcam -= getrelmouse()
     cursor = icgrab
-  elseif isvalbetween(mousepos.y,85,95) and not editbig then -- select spritesheet
+  elseif isvalbetween(mousepos.y,86,95) and not editbig then -- select spritesheet
     if mousepos.x > 95 then
       cursor = icfngr
       if (mbtnp(0)) edittab = (mousepos.x-96)\8
@@ -85,7 +85,7 @@ function editorupdate()
     if (mbtnp(0)) editspr = edittab*64 + mousepos.x\8 + (mousepos.y-96)\8*16
   elseif editmod == 1 then
     if mbtn(0) and editmod == 1 then -- add or remove floor
-      if not f and editspr~=-1 then
+      if not f and editspr>=0 then
         lm = lm or {}
         lm.floors = {{cam_z,editspr}}
         luamapset(x,y,lm)
@@ -94,7 +94,7 @@ function editorupdate()
         for i,v in ipairs(f) do
           if v[1]==cam_z then
             insert = nil
-            if editspr == -1 then
+            if editspr < 0 then
               deli(f,i)
               if (#f==0) lm.floors=nil
             else
@@ -106,12 +106,12 @@ function editorupdate()
           end
           insert = i
         end
-        if insert and editspr~=-1 then
+        if insert and editspr>=0 then
           add(f,{cam_z,editspr},insert)
         end
       end
     elseif mbtn(1) then -- copy floor
-      editspr=-1
+      if (editspr>=0) editspr=-editspr-1
       for v in all(f) do
         if v[1]==cam_z then
           editspr = v[2]
@@ -121,7 +121,7 @@ function editorupdate()
   elseif editmod==2 then -- edit walls
     local gridmouse,lastgridmouse = (editcam + mousepos)/8, (editcam + lastmousepos)/8
     local prvmap,newmap = lastgridmouse\1,gridmouse\1
-    if editspr==-1 then
+    if editspr<0 then
       if mbtn(0) then
         local function trydelwall(mx,my)
           local lm=luamap(mx,my)
@@ -180,8 +180,8 @@ function editorupdate()
 
   editbtn.small.on = not editbig
   editbtn.big.on = editbig
-  editbtn.draw.on = editspr~=-1
-  editbtn.del.on = editspr==-1
+  editbtn.draw.on = editspr>=0
+  editbtn.del.on = editspr<0
   editbtn.floor.on = editmod==1
   editbtn.wall.on = editmod==2
   cam_z = flr(cam_z*8)/8 - mwhl/8
@@ -281,10 +281,10 @@ function editordraw()
     end
 
     -- tools and tabs
-    rectfill(0,85,127,95,5)
+    rectfill(0,86,127,95,5)
     --?icrayn,9,87,editspr~=-1 and 7 or 13
     --?icross,20,87,editspr==-1 and 7 or 13
-    if editspr~=-1 then
+    if editspr>=0 then
       rectfill(79,88,91,94,6)
       local str=tostr(editspr)
       while #str<3 do str="0"..str end
