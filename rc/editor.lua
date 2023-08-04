@@ -3,23 +3,31 @@ edittab = 0
 editspr = 0
 editbig = false
 editmod = 1 -- 1 for floors, 2 for walls
+editvew = 1 -- 1 for tile view, 2 for gridcasting
 
---[[local str=""
-for s=48,51 do
+--[[
+local str=""
+for s=49,50 do
   str ..= "\""..escbin(sprtop8scii(s)).."\"\r"
 end
-printh(str,"@clip")]]
+printh(str,"@clip")--]]
 icarrw = "ᶜ1⁶.²⁵\9■!」◀\0⁸ᶜ7⁶.\0²⁶ᵉ゛⁶⁸\0"
 icgrab = "ᶜ1⁶.⁘*CAB<\0\0⁸ᶜ7⁶.\0T<><\0\0\0"
 icfngr = "³eᶜ1⁶.⁴\10\10+BAB<⁸ᶜ7⁶.\0⁴⁴T=><\0"
+icrsiz = "ᶜ1⁶.⁴\n■\0■\n⁴\0⁸ᶜ7⁶.\0⁴ᵉ\0ᵉ⁴\0\0"
+
 ictab0 = "⁶.\0>ckkc○○⁸ᶜd⁶.\0\0、⁘⁘、\0\0"
 ictab1 = "⁶.\0>swwc○○⁸ᶜd⁶.\0\0ᶜ⁸⁸、\0\0"
 ictab2 = "⁶.\0>co{c○○⁸ᶜd⁶.\0\0、▮⁴、\0\0"
 ictab3 = "⁶.\0>cgoc○○⁸ᶜd⁶.\0\0、「▮、\0\0"
-icross = "⁶.\"w>、>w\"\0"
-icrayn = "⁶.▮8|>。	⁷\0"
+
 icsprs = "⁶.?!?\0‖*\0\0"
 icexpd = "⁶.?!!!!?\0\0"
+ictiln = "⁶.□?□□?□\0\0"
+icrcst = "⁶.c]II]c\0\0"
+
+icross = "⁶.\"w>、>w\"\0"
+icrayn = "⁶.▮8|>。	⁷\0"
 icwall = "⁶.p~~~~ᵉ\0\0"
 icflor = "⁶.\0、○◜|「\0\0"
 
@@ -30,6 +38,8 @@ end
 
 addeditbtn("small",5,1,icsprs,function() editbig=false end)
 addeditbtn("big",13,1,icexpd,function() editbig=true end)
+addeditbtn("tiling",108,1,ictiln,function() editvew=1 end)
+addeditbtn("raycast",116,1,icrcst,function() editvew=2 end)
 addeditbtn("draw",5,88,icrayn,function() if (editspr<0) editspr=-editspr-1 end)
 addeditbtn("del",14,88,icross,function() if (editspr>=0) editspr=-editspr-1 end)
 addeditbtn("floor",35,88,icflor,function() editmod=1 end)
@@ -180,6 +190,8 @@ function editorupdate()
 
   editbtn.small.on = not editbig
   editbtn.big.on = editbig
+  editbtn.tiling.on = editvew==1
+  editbtn.raycast.on = editvew==2
   editbtn.draw.on = editspr>=0
   editbtn.del.on = editspr<0
   editbtn.floor.on = editmod==1
@@ -213,53 +225,59 @@ end
 function editordraw()
   cls()
 
-  -- grid background
-  fillp(0b1010010110100101.11)
-  if editmod==1 then
-    grid()
-    fillp()
-  end
+  if editvew == 2 then
+    camera(-64,-64)
+    disperscan(draw3Dcell)
+  else
+    -- grid background
+    fillp(0b1010010110100101.11)
+    if editmod==1 then
+      grid()
+      fillp()
+    end
 
-  -- floor tiles
-  local ex,ey = editcam:unpack()
-  camera(ex,ey)
-  ex,ey = ex\8,ey\8
+    -- floor tiles
+    local ex,ey = editcam:unpack()
+    camera(ex,ey)
+    ex,ey = ex\8,ey\8
 
-  for y=ey,ey+16 do
-    for x=ex,ex+16 do
-      local sx,sy=x*8,y*8
-      local lm=luamap(x,y)
-      for v in all(lm and lm.floors) do
-        local z,m = unpack(v)
-        if topdowndepth(z) then
-          spr(m,sx,sy)
+    for y=ey,ey+16 do
+      for x=ex,ex+16 do
+        local sx,sy=x*8,y*8
+        local lm=luamap(x,y)
+        for v in all(lm and lm.floors) do
+          local z,m = unpack(v)
+          if topdowndepth(z) then
+            spr(m,sx,sy)
+          end
         end
       end
     end
-  end
-  pal()
-  fillp(editmod==1 and 0b1010010110100101.1 or 0)
-  if editmod==2 then
-    camera(0,0)
-    grid()
-    camera(editcam:unpack())
-  end
+    pal()
+    fillp(editmod==1 and 0b1010010110100101.1 or 0)
+    if editmod==2 then
+      camera(0,0)
+      grid()
+      camera(editcam:unpack())
+    end
 
-  -- wall lines
-  for y=ey,ey+16 do
-    for x=ex,ex+16 do
-      local lm=luamap(x,y)
-      for v in all(lm and lm.walls) do
-        local x1,y1,x2,y2,z1,z2,m = unpack(v)
-        if (isvalbetween(cam_z,z1,z2)) line(x1*8,y1*8,x2*8,y2*8,7)
+    -- wall lines
+    for y=ey,ey+16 do
+      for x=ex,ex+16 do
+        local lm=luamap(x,y)
+        for v in all(lm and lm.walls) do
+          local x1,y1,x2,y2,z1,z2,m = unpack(v)
+          if (isvalbetween(cam_z,z1,z2)) line(x1*8,y1*8,x2*8,y2*8,7)
+        end
       end
     end
-  end
 
-  if (editwls) line(editwls.x*8,editwls.y*8,(mousepos+editcam):unpack())
+    if (editwls) line(editwls.x*8,editwls.y*8,(mousepos+editcam):unpack())
+  end
 
   fillp()
   camera(0,0)
+  pal()
   palt(0,false)
 
   if not editbig then

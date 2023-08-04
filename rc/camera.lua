@@ -4,6 +4,8 @@ function setupcamera()
   cam_z = 0
   cam_far = 6
   cam_near = 0.085
+  disp_top = -64
+  disp_bottom = 64
   setcamdir()
 end
 

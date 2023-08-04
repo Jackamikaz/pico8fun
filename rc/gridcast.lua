@@ -118,7 +118,7 @@ function floortrapeze(l,r,lt,rt,y1,y2,alt,ox,oy)
   local s=sgn(y2-y1)
   lt,rt=(lt-l)/(y2-y1)*s,(rt-r)/(y2-y1)*s
   
-  for y1=y1,mid(y2,-64,64),s do
+  for y1=y1,mid(y2,disp_top,disp_bottom),s do
     if r >= -64 and l < 64 then
       local la,ra = mid(-64,flr(l), 63), mid(-64,flr(r), 63)
 
@@ -143,6 +143,7 @@ function drawwall(x1, y1, x2, y2, z1, z2, sp)
   --pretransformed by the caller now
   --x1,y1 = worldtocam(x1,y1)
   --x2,y2 = worldtocam(x2,y2)
+  if (z1>z2) z1,z2 = z2,z1
   z1,z2 = cam_z-z1,cam_z-z2
   local t1,t2 = 1,0
   if y1 < cam_near then
@@ -173,7 +174,7 @@ function drawwall(x1, y1, x2, y2, z1, z2, sp)
   -- making sure we draw from left to right
   --if (x1 > x2) x1,y1,y1b,w1,x2,y2,y2b,w2 = x2,y2,y2b,w2,x1,y1,y1b,w1
   -- EDIT : nope, we're culling
-  if (x1 > x2) return
+  if (x1 > x2 or max(y1,y2) < disp_top or min(y1b,y2b) > disp_bottom) return
 
   -- calculate slopes
   local dx = x2-x1
