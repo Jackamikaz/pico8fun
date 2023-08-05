@@ -1,5 +1,5 @@
 player = {}
-player.pos = newvector(8.5, 7.5)
+player.pos = newvector2(8.5, 7.5)
 player.alt = 0
 player.size = 2.5
 player.dir = 0.25
@@ -20,7 +20,7 @@ function player.draw(_ENV)
 end
 
 function player.getunitdir(_ENV)
-  return newvector(cos(dir), sin(dir))
+  return newvector2(cos(dir), sin(dir))
 end
 
 function player.update(_ENV)

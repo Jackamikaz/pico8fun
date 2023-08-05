@@ -1,4 +1,4 @@
-editcam = newvector()
+editcam = newvector2()
 edittab = 0
 editspr = 0
 editbig = false
@@ -45,24 +45,10 @@ addeditbtn("del",14,88,icross,function() if (editspr>=0) editspr=-editspr-1 end)
 addeditbtn("floor",35,88,icflor,function() editmod=1 end)
 addeditbtn("wall",44,88,icwall,function() editmod=2 end)
 
---[[
-local test = {1,2,3,4,5,6,7,8}
-
-local i=1
-while i<=#test do
-  local v=test[i]
-  printh("i is "..i)
-  if v==2 or v==3 or v==7 then
-    printh("deleting value "..v.." at index "..i)
-    deli(test,i)
-  else
-    i+=1
-  end
+function enditorenter()
+  disp_top = -55
+  disp_bottom = editbig and 64 or 21
 end
-
-for v in all(test) do
-  printh(v)
-end]]
 
 function editorupdate()
   mousesupport()
@@ -82,112 +68,163 @@ function editorupdate()
     end
   end
 
-  if mousepos.y < 8 then
-  elseif mbtn(2) then -- grab and pan scene
-    editcam -= getrelmouse()
-    cursor = icgrab
-  elseif isvalbetween(mousepos.y,86,95) and not editbig then -- select spritesheet
-    if mousepos.x > 95 then
-      cursor = icfngr
-      if (mbtnp(0)) edittab = (mousepos.x-96)\8
-    end
-  elseif mousepos.y > 95 and not editbig then -- select sprite
-    if (mbtnp(0)) editspr = edittab*64 + mousepos.x\8 + (mousepos.y-96)\8*16
-  elseif editmod == 1 then
-    if mbtn(0) and editmod == 1 then -- add or remove floor
-      if not f and editspr>=0 then
-        lm = lm or {}
-        lm.floors = {{cam_z,editspr}}
-        luamapset(x,y,lm)
-      else
-        local insert=1
-        for i,v in ipairs(f) do
-          if v[1]==cam_z then
-            insert = nil
-            if editspr < 0 then
-              deli(f,i)
-              if (#f==0) lm.floors=nil
-            else
-              v[2] = editspr
+  if isvalbetween(mousepos.y,9,editbig and 128 or 85) then
+    if editvew==1 then
+      if mbtn(2) then -- grab and pan scene
+        editcam -= getrelmouse()
+        cursor = icgrab
+      end
+
+      if editmod == 1 then
+        if mbtn(0) and editmod == 1 then -- add or remove floor
+          if not f and editspr>=0 then
+            lm = lm or {}
+            lm.floors = {{cam_z,editspr}}
+            luamapset(x,y,lm)
+          else
+            local insert=1
+            for i,v in ipairs(f) do
+              if v[1]==cam_z then
+                insert = nil
+                if editspr < 0 then
+                  deli(f,i)
+                  if (#f==0) lm.floors=nil
+                else
+                  v[2] = editspr
+                end
+                break
+              elseif v[1] > cam_z then
+                break
+              end
+              insert = i
             end
-            break
-          elseif v[1] > cam_z then
-            break
+            if insert and editspr>=0 then
+              add(f,{cam_z,editspr},insert)
+            end
           end
-          insert = i
+        elseif mbtn(1) then -- copy floor
+          if (editspr>=0) editspr=-editspr-1
+          for v in all(f) do
+            if v[1]==cam_z then
+              editspr = v[2]
+            end
+          end
         end
-        if insert and editspr>=0 then
-          add(f,{cam_z,editspr},insert)
-        end
-      end
-    elseif mbtn(1) then -- copy floor
-      if (editspr>=0) editspr=-editspr-1
-      for v in all(f) do
-        if v[1]==cam_z then
-          editspr = v[2]
-        end
-      end
-    end
-  elseif editmod==2 then -- edit walls
-    local gridmouse,lastgridmouse = (editcam + mousepos)/8, (editcam + lastmousepos)/8
-    local prvmap,newmap = lastgridmouse\1,gridmouse\1
-    if editspr<0 then
-      if mbtn(0) then
-        local function trydelwall(mx,my)
-          local lm=luamap(mx,my)
-          if lm and lm.walls then
-            local w,i = lm.walls,1
-            while i<=#w do
-              local v=w[i]
-              local a,b = newvector(unpack(v,1,2)),newvector(unpack(v,3,4))
-              if isvalbetween(cam_z,unpack(v,5,6)) and segmentstouch(a,b,gridmouse,lastgridmouse) then
-                deli(w,i)
-              else
-                i+=1
+      elseif editmod==2 then -- edit walls
+        local gridmouse,lastgridmouse = (editcam + mousepos)/8, (editcam + lastmousepos)/8
+        local prvmap,newmap = lastgridmouse\1,gridmouse\1
+        if editspr<0 then
+          if mbtn(0) then
+            local function trydelwall(mx,my)
+              local lm=luamap(mx,my)
+              if lm and lm.walls then
+                local w,i = lm.walls,1
+                while i<=#w do
+                  local v=w[i]
+                  local a,b = newvector2(unpack(v,1,2)),newvector2(unpack(v,3,4))
+                  if isvalbetween(cam_z,unpack(v,5,6)) and segmentstouch(a,b,gridmouse,lastgridmouse) then
+                    deli(w,i)
+                  else
+                    i+=1
+                  end
+                end
+                if #w == 0 then
+                  lm.walls = nil
+                  lm.solid = nil
+                end
               end
             end
-            if #w == 0 then
-              lm.walls = nil
-              lm.solid = nil
+            trydelwall(prvmap:unpack())
+            if (prvmap~=newmap) trydelwall(newmap:unpack())
+          end
+        else
+          if mbtnp(0) then
+            editwls = gridmouse
+            editwls.genbyclick = true
+          end
+          if mbtn(0) then
+            if prvmap~=newmap then
+              local l=gridmouse-lastgridmouse
+              local ls=#l
+              l /= ls
+              --printh("----------")
+              raydda:start(lastgridmouse.x,lastgridmouse.y,l.x,l.y)
+              repeat
+                local pmx,pmy = raydda.mx,raydda.my
+                raydda:next()
+                -- add wall here
+                local next = newvector2(raydda:point())
+                if not editwls.editwls.genbyclick then
+                  local lm = luamap(pmx,pmy) or {}
+                  lm.walls = lm.walls or {}
+                  add(lm.walls,{editwls.x,editwls.y,next.x,next.y,0,1,editspr})
+                  luamapset(pmx,pmy,lm)
+                end
+                editwls = next
+                --printv("wx,wy",editwls.x,editwls.y)
+              until raydda.mx==newmap.x and raydda.my==newmap.y or raydda.d >=ls
+            end
+          else
+            editwls = nil
+          end
+        end
+      end
+    else
+      if mbtn(2) then
+        local relm = getrelmouse()/8
+        setcamdir(cam_dir+relm.x/16)
+        cam_x += cam_dircos*relm.y
+        cam_y += cam_dirsin*relm.y
+      end
+      if mbtnp(0) and editspr >= 0 then
+        --printh("---------")
+        local raystart = newvector3(cam_x,cam_y,cam_z)
+        local rx,ry = worldtocam(cam_x+(mousepos.x-64)/64,cam_y+projplanedist/64)
+        local raydir = newvector3(rx,ry,-(mousepos.y-64)/64):unit()
+        --printh("raydir "..raydir:str().." len "..#raydir)
+        raydda:start(raystart.x,raystart.y,raydir.x,raydir.y)
+        local dist = 0
+        while dist < cam_far do
+          raydda:next()
+          dist = raydda.d
+          local mw = raydda:map()
+          for f in all(mw and mw.floors) do
+            local a = newvector3(raydda.mx,raydda.my,f[1])
+            local b = a:dup() b.x += 1
+            local c = b:dup() c.y += 1
+            local d = a:dup() d.y += 1
+            --printv("s,a,b,c,d",f[2],a:str(),b:str(),c:str(),d:str())
+            if ray3Dsquareintersection(raystart,raydir,a,b,c,d) then
+              --printh("found floor")
+              f[2] = editspr
+              dist = cam_far
+              break
+            end
+          end
+          for w in all(mw and mw.walls) do
+            local x1,y1,x2,y2,z1,z2 = unpack(w)
+            local a,b,c,d = newvector3(x1,y1,z1),newvector3(x2,y2,z1),newvector3(x2,y2,z2),newvector3(x1,y1,z2)
+            if ray3Dsquareintersection(raystart,raydir,a,b,c,d) then
+              --printh("found floor")
+              w[7] = editspr
+              dist = cam_far
+              break
             end
           end
         end
-        trydelwall(prvmap:unpack())
-        if (prvmap~=newmap) trydelwall(newmap:unpack())
-      end
-    else
-      if mbtnp(0) then
-        editwls = gridmouse
-        editwls.genbyclick = true
-      end
-      if mbtn(0) then
-        if prvmap~=newmap then
-          local l=gridmouse-lastgridmouse
-          local ls=#l
-          l /= ls
-          --printh("----------")
-          raydda:start(lastgridmouse.x,lastgridmouse.y,l.x,l.y)
-          repeat
-            local pmx,pmy = raydda.mx,raydda.my
-            raydda:next()
-            -- add wall here
-            local next = newvector(raydda:point())
-            if not editwls.editwls.genbyclick then
-              local lm = luamap(pmx,pmy) or {}
-              lm.walls = lm.walls or {}
-              add(lm.walls,{editwls.x,editwls.y,next.x,next.y,0,1,editspr})
-              luamapset(pmx,pmy,lm)
-            end
-            editwls = next
-            --printv("wx,wy",editwls.x,editwls.y)
-          until raydda.mx==newmap.x and raydda.my==newmap.y or raydda.d >=ls
-        end
-      else
-        editwls = nil
       end
     end
+  elseif mousepos.y>85 and not editbig then
+    if mousepos.y < 96 then -- select spritesheet
+      if mousepos.x > 95 then
+        cursor = icfngr
+        if (mbtnp(0)) edittab = (mousepos.x-96)\8
+      end
+    else
+      if (mbtnp(0)) editspr = edittab*64 + mousepos.x\8 + (mousepos.y-96)\8*16
+    end
   end
-
+  
   editbtn.small.on = not editbig
   editbtn.big.on = editbig
   editbtn.tiling.on = editvew==1

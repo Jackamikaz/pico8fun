@@ -1,12 +1,11 @@
 -- translate world position to screen coordinates
-function getscreenpos(wx,wy,wz)
-  wx,wy = wy-cam_y, wx-cam_x
-  wx,wy = wx*cam_dircos - wy*cam_dirsin, wx*cam_dirsin + wy*cam_dircos
-  if wy > 0.1 then
-    local df = projplanedist / wy
-    return wx * df, wz * df
-  end
-end
+--function getscreenpos(wx,wy,wz)
+--  wx,wy = worldtocam(wx,wy)
+--  if wy > 0.1 then
+--    local df = projplanedist / wy
+--    return wx * df, wz * df
+--  end
+--end
 
 -- get world coordinate from a screen one given a known world z value
 function getfloorpos(sx, sy, wz)

@@ -25,6 +25,25 @@ function sqrlinedist(px, py, x1, y1, x2, y2)
   return sqrdst(px,py,lineintersection(x1,y1,x2,y2,px,py,px+y1-y2,py-x1+x2))
 end
 
+function rayplaneintersection(raystart,raydir,planep,planenor)
+  local d = raydir^planenor
+  if (abs(d) < 0x0.001) return
+  return raystart+raydir*(planenor^(planep - raystart))/d
+end
+
+function ray3Dsquareintersection(raystart,raydir,a,b,c,d)
+  local ab,bc,cd,da = b-a,c-b,d-c,a-d
+  local pln = (ab&bc):unit()
+  local p = rayplaneintersection(raystart,raydir,a,pln)
+  if (not p) return
+  --printh("intersection at "..p:str())
+  local sa,sb,sc,sd = sgn((ab&pln)^(p-a)),sgn((bc&pln)^(p-b)),sgn((cd&pln)^(p-c)),sgn((da&pln)^(p-d))
+  --printv("cab,cbc,ccd,cda",(ab%pln):str(),(bc%pln):str(),(cd%pln):str(),(da%pln):str())
+  --printv("ap,bp,cp,dp",(p-a):str(),(p-b):str(),(p-c):str(),(p-d):str())
+  --printv("sa,sb,sc,sd",sa,sb,sc,sd)
+  return sa==sb and sb==sc and sc==sd and p or nil
+end
+
 raydda = setmetatable({},{__index=_ENV})
 function raydda.start(_ENV, startx, starty, rayx, rayy)
   px,py,rx,ry = startx, starty, rayx, rayy

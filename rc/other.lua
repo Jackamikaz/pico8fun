@@ -3,17 +3,17 @@
 
 function deductnormal(mt, cx, cy)
   if mt.x1 then
-    return newvector(mt.y1 - mt.y2, mt.x2-mt.x1):unit()
+    return newvector2(mt.y1 - mt.y2, mt.x2-mt.x1):unit()
   end
   local x,y = cx % 1, cy % 1
   if x < 0.0005 then
-    return newvector(-1,0)
+    return newvector2(-1,0)
   elseif x > 0.9995 then
-    return newvector(1,0)
+    return newvector2(1,0)
   elseif y < 0.0005 then
-    return newvector(0,-1)
+    return newvector2(0,-1)
   else
-    return newvector(0,1)
+    return newvector2(0,1)
   end
 end
 

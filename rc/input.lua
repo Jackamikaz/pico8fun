@@ -6,8 +6,8 @@ end
 --mouse support utils
 lastmousestate = 0
 currentmousestate = 0
-lastmousepos = newvector()
-mousepos = newvector()
+lastmousepos = newvector2()
+mousepos = newvector2()
 function mousesupport()
   lastmousestate = currentmousestate
   currentmousestate = stat(34)

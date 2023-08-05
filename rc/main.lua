@@ -50,7 +50,12 @@ end}
 currentdraw = 3
 
 modes = {
-play={update=function()
+play={
+enter=function()
+  disp_top=-64
+  disp_bottom=64
+end,
+update=function()
   player:update()
   player:copytocam()
 end,
@@ -63,7 +68,9 @@ draw=function()
   drawmethods[currentdraw]()
 end,
 fps=30},
-edit={update=editorupdate,
+edit={
+enter=editorenter,
+update=editorupdate,
 draw=editordraw,
 fps=60}
 }
