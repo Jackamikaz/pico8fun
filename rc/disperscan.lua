@@ -1,4 +1,4 @@
-function disperscan(func)
+function disperscan(func,...)
   local dx,dy = -sgn(cam_dircos),-sgn(cam_dirsin)
   if abs(cam_dircos) > abs(cam_dirsin) then
     dy = 0 else dx = 0 end
@@ -29,12 +29,12 @@ function disperscan(func)
       local f = (i-1)*2-1
       if sgn0(msx-sx)==pdx*f and sgn0(msy-sy)==pdy*f then
         while msx ~= sx or msy ~= sy do
-          func(flr(msx),flr(msy))
+          func(flr(msx),flr(msy),...)
           msx -= pdx*f msy -= pdy*f
         end
       end
     end
-    func(flr(sx),flr(sy))
+    func(flr(sx),flr(sy),...)
     sx += dx sy += dy
   end
 end

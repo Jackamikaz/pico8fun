@@ -11,7 +11,7 @@
 function getfloorpos(sx, sy, wz)
   local floordist = antiFishEye[sx] * wz * projplanedist / sy
   local raydir = cam_dir + rayDir[sx]
-  return cam_x + cos(raydir) * floordist, cam_y + sin(raydir) * floordist, floordist*cos(rayDir[sx])
+  return cam_x + cos(raydir) * floordist, cam_y + sin(raydir) * floordist
 end
 
 -- translate world position to camera coordinates
@@ -21,12 +21,23 @@ function worldtocam(wx,wy)
 end
 
 function drawfloortile(fx, fy, fz, s)
+  -- local x1,y1 = worldtocam(fx,fy)
+  -- local x2,y2 = worldtocam(fx+1,fy)
+  -- local x3,y3 = worldtocam(fx+1,fy+1)
+  -- local x4,y4 = worldtocam(fx,fy+1)
   local ox,oy = fx-s*2-0.5,fy-0.5
 
   local x1,y1 = worldtocam(fx,fy)
-  local x2,y2 = worldtocam(fx+1,fy)
-  local x3,y3 = worldtocam(fx+1,fy+1)
-  local x4,y4 = worldtocam(fx,fy+1)
+  local x2,y2 = x1+cam_dircos,y1+cam_dirsin
+  local x3,y3 = x1+cam_dircos-cam_dirsin,y1+cam_dirsin+cam_dircos
+  local x4,y4 = x1-cam_dirsin,y1+cam_dircos
+
+  -- local dx,dy = (cam_dircos-cam_dirsin)*0.5,(cam_dirsin+cam_dircos)*0.5
+  -- local x1,y1 = fx-dx,fy-dy
+  -- local x2,y2 = fx-dy,fy+dx
+  -- local x3,y3 = fx+dx,fy+dy
+  -- local x4,y4 = fx+dy,fy-dx
+  -- ox,oy = ox-s*2-0.5,oy-0.5
 
   if (y1 < y2) x1,y1,x2,y2 = x2,y2,x1,y1
   if (y3 < y4) x3,y3,x4,y4 = x4,y4,x3,y3
@@ -121,11 +132,11 @@ function floortrapeze(l,r,lt,rt,y1,y2,alt,ox,oy)
     if r >= -64 and l < 64 then
       local la,ra = mid(-64,flr(l), 63), mid(-64,flr(r), 63)
 
-      local lx,ly,fd = getfloorpos(la,y1,alt)
+      local lx,ly = getfloorpos(la,y1,alt)
       local rx,ry = getfloorpos(ra,y1,alt)
 
       local sd = ra-la
-      pald(fd)
+      pald(projplanedist*alt/y1)
       tline(la,y1,ra,y1,lx-ox,ly-oy,(rx-lx)/sd,(ry-ly)/sd)
       --rectfill(la,y1,ra,y1,7)
 
@@ -139,9 +150,8 @@ end
 
 function drawwall(x1, y1, x2, y2, z1, z2, sp)
   -- cut the line to stay in front of the camera
-  --pretransformed by the caller now
-  --x1,y1 = worldtocam(x1,y1)
-  --x2,y2 = worldtocam(x2,y2)
+  x1,y1 = worldtocam(x1,y1)
+  x2,y2 = worldtocam(x2,y2)
   if (z1>z2) z1,z2 = z2,z1
   z1,z2 = cam_z-z1,cam_z-z2
   local t1,t2 = 1,0
@@ -209,38 +219,26 @@ function drawwall(x1, y1, x2, y2, z1, z2, sp)
   end
 end
 
-function draw3Dcell(x,y)
+function traverse3Dcell(x,y,ordhandler)
   local lm = luamap(x,y)
   if lm then
-    local f = lm.floors
-    if f then
-      local middle = 0x7fff
-      for i,v in ipairs(f) do
-        local z = v[1]
-        if cam_z < z then
-          middle = i
-          break
-        end
-        drawfloortile(x,y,z,v[2])
-      end
-      for i=#f,middle,-1 do
-        local v = f[i]
-        drawfloortile(x,y,v[1],v[2])
-      end
-    end
     local ord = {}
-    for v in all(lm.walls) do
-      local x1,y1,x2,y2,z1,z2,m = unpack(v)
-      x1,y1 = worldtocam(x1,y1)
-      x2,y2 = worldtocam(x2,y2)
-      local d = y1+y2--no need to divide by 2, the comparison is still correct
-      addordered(ord,{d,x1,y1,x2,y2,z1,z2,m},
-        function(a,b)
-          return a[1] > b[1]
-        end)
+    local function ordcomp(a,b) return a[1] > b[1] end
+    for f in all(lm.floors) do
+      local d = sqrdst3(cam_x,cam_y,cam_z,x+0.5,y+0.5,f[1])
+      addordered(ord,{d,1,x,y,f[1],f[2],f},ordcomp)
     end
-    for w in all(ord) do
-      drawwall(unpack(w,2,8))
+    for w in all(lm.walls) do
+      local x1,y1,x2,y2,z1,z2,m = unpack(w)
+      local d = sqrdst3(cam_x,cam_y,cam_z,(x1+x2)*0.5,(y1+y2)*0.5,(z1+z2)*0.5)
+      addordered(ord,{d,2,x1,y1,x2,y2,z1,z2,m,w},ordcomp)
     end
+    ordhandler(ord)
+  end
+end
+
+function ordhandlerdraw(ord)
+  for p in all(ord) do
+    (p[2]==1 and drawfloortile or drawwall)(unpack(p,3))
   end
 end

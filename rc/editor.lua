@@ -147,7 +147,6 @@ function editorupdate()
               local l=gridmouse-lastgridmouse
               local ls=#l
               l /= ls
-              --printh("----------")
               raydda:start(lastgridmouse.x,lastgridmouse.y,l.x,l.y)
               repeat
                 local pmx,pmy = raydda.mx,raydda.my
@@ -176,41 +175,43 @@ function editorupdate()
         cam_x += cam_dircos*relm.y
         cam_y += cam_dirsin*relm.y
       end
-      if mbtnp(0) and editspr >= 0 then
-        --printh("---------")
+      if (mbtn(0) or mbtn(1)) and editspr >= 0 then
         local raystart = newvector3(cam_x,cam_y,cam_z)
         local rx,ry = worldtocam(cam_x+(mousepos.x-64)/64,cam_y+projplanedist/64)
         local raydir = newvector3(rx,ry,-(mousepos.y-64)/64):unit()
-        --printh("raydir "..raydir:str().." len "..#raydir)
+        rx, ry = raydir.x, raydir.y
         raydda:start(raystart.x,raystart.y,raydir.x,raydir.y)
         local dist = 0
         while dist < cam_far do
           raydda:next()
           dist = raydda.d
-          local mw = raydda:map()
-          for f in all(mw and mw.floors) do
-            local a = newvector3(raydda.mx,raydda.my,f[1])
+          local function colfloor(x,y,z,s,f)
+            if (dist>=cam_far) return
+            local a = newvector3(x,y,z)
             local b = a:dup() b.x += 1
             local c = b:dup() c.y += 1
             local d = a:dup() d.y += 1
-            --printv("s,a,b,c,d",f[2],a:str(),b:str(),c:str(),d:str())
             if ray3Dsquareintersection(raystart,raydir,a,b,c,d) then
-              --printh("found floor")
-              f[2] = editspr
+              if (mbtn(0)) f[2] = editspr else editspr = f[2]
               dist = cam_far
-              break
             end
           end
-          for w in all(mw and mw.walls) do
-            local x1,y1,x2,y2,z1,z2 = unpack(w)
+          local function colwall(x1, y1, x2, y2, z1, z2, sp, w)
+            if (dist>=cam_far) return
+            x1, y1, x2, y2, z1, z2, sp = unpack(w)
             local a,b,c,d = newvector3(x1,y1,z1),newvector3(x2,y2,z1),newvector3(x2,y2,z2),newvector3(x1,y1,z2)
             if ray3Dsquareintersection(raystart,raydir,a,b,c,d) then
-              --printh("found floor")
-              w[7] = editspr
+              if (mbtn(0)) w[7] = editspr else editspr = w[7]
               dist = cam_far
-              break
             end
           end
+          local function ordhandlercol(ord)
+            for i=#ord,1,-1 do
+              local p = ord[i]; --next line won't work without this semicolon!
+              (p[2]==1 and colfloor or colwall)(unpack(p,3))
+            end
+          end
+          traverse3Dcell(raydda.mx,raydda.my,ordhandlercol)
         end
       end
     end
@@ -264,7 +265,7 @@ function editordraw()
 
   if editvew == 2 then
     camera(-64,-64)
-    disperscan(draw3Dcell)
+    disperscan(traverse3Dcell,ordhandlerdraw)
   else
     -- grid background
     fillp(0b1010010110100101.11)

@@ -44,7 +44,7 @@ function() -- CLASSIC RAYCAST ------------------------------
 end,
 function() -- MY "GRIDCASTING" ------------------------------
   camera(-64,-64)
-  disperscan(draw3Dcell)
+  disperscan(traverse3Dcell,ordhandlerdraw)
 end}
 
 currentdraw = 3

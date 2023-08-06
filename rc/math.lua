@@ -37,6 +37,14 @@ function sqrdst(x1,y1,x2,y2)
   return r
 end
 
+function sqrdst3(x1,y1,z1,x2,y2,z2)
+  local dx,dy,dz = x1-x2,y2-y1,z2-z1
+  local r = dx*dx+dy*dy+dx*dx
+  --overflow can happen! limit to max
+  if (r < 0) return 0x7fff.ffff
+  return r
+end
+
 function isvalbetween(v,a,b)
   return mid(v,a,b) == v
 end
