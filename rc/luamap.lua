@@ -27,7 +27,7 @@ function buildluamap()
         if not fget(mget(x,y+1),0) then
           add(w,{x,y+1,x+1,y+1,0,h,m})
         end
-        luamapset(x,y,{walls=w,solid=true})
+        luamapset(x,y,{walls=w,chunk=true})
       elseif m~=0 then
         luamapset(x,y,{floors={{0,m}}})
       end
@@ -68,7 +68,7 @@ function buildluamap()
 
     lm.floors = floors
     lm.walls = walls
-    lm.solid = true
+    lm.chunk = true
     luamapset(x,y,lm)
   end
 

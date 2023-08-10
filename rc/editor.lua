@@ -2,19 +2,21 @@ editcam = newvector2()
 edittab = 0
 editspr = 0
 editbig = false
-editmod = 1 -- 1 for floors, 2 for walls
+editwlh = 1
+editmod = 1 -- 1 for floors, 2 for walls, 3 for chunks
 editvew = 1 -- 1 for tile view, 2 for gridcasting
 
 --[[
 local str=""
-for s=49,50 do
+for s=48,49 do
   str ..= "\""..escbin(sprtop8scii(s)).."\"\r"
 end
 printh(str,"@clip")--]]
 icarrw = "ᶜ1⁶.²⁵\9■!」◀\0⁸ᶜ7⁶.\0²⁶ᵉ゛⁶⁸\0"
 icgrab = "ᶜ1⁶.⁘*CAB<\0\0⁸ᶜ7⁶.\0T<><\0\0\0"
 icfngr = "³eᶜ1⁶.⁴\10\10+BAB<⁸ᶜ7⁶.\0⁴⁴T=><\0"
-icrsiz = "ᶜ1⁶.⁴\n■\0■\n⁴\0⁸ᶜ7⁶.\0⁴ᵉ\0ᵉ⁴\0\0"
+icrszv = "ᶜ1⁶.⁴\n■\0■\n⁴\0⁸ᶜ6⁶.\0\0ᵉ\0ᵉ\0\0\0⁸ᶜ7⁶.\0⁴\0\0\0⁴\0\0"
+icrszh = "ᶜ1⁶.⁘\"A\"⁘\0\0\0⁸ᶜ6⁶.\0⁘⁘⁘\0\0\0\0⁸ᶜ7⁶.\0\0\"\0\0\0\0\0"
 
 ictab0 = "⁶.\0>ckkc○○⁸ᶜd⁶.\0\0、⁘⁘、\0\0"
 ictab1 = "⁶.\0>swwc○○⁸ᶜd⁶.\0\0ᶜ⁸⁸、\0\0"
@@ -43,9 +45,9 @@ addeditbtn("raycast",116,1,icrcst,function() editvew=2 end)
 addeditbtn("draw",5,88,icrayn,function() if (editspr<0) editspr=-editspr-1 end)
 addeditbtn("del",14,88,icross,function() if (editspr>=0) editspr=-editspr-1 end)
 addeditbtn("floor",35,88,icflor,function() editmod=1 end)
-addeditbtn("wall",44,88,icwall,function() editmod=2 end)
+addeditbtn("wall",44,88,icwall,function() if editmod==2 then editmod=3 else editmod=2 end end)
 
-function enditorenter()
+function editorenter()
   disp_top = -55
   disp_bottom = editbig and 64 or 21
 end
@@ -68,7 +70,16 @@ function editorupdate()
     end
   end
 
-  if isvalbetween(mousepos.y,9,editbig and 128 or 85) then
+  if changingwallheight then
+    cursor = icrszh
+    editwlh = max((mousepos.x-changingwallheight)*4\8/8,0.125)
+    changingwallheight = mbtn(0) and changingwallheight
+  elseif mousepos.y <= 8 then
+    if isvalbetween(mousepos.x,64,100) then
+      cursor = icfngr
+      changingwallheight = mbtnp(0) and mousepos.x - editwlh*16
+    end
+  elseif mousepos.y <= (editbig and 128 or 85) then
     if editvew==1 then
       if mbtn(2) then -- grab and pan scene
         editcam -= getrelmouse()
@@ -76,7 +87,7 @@ function editorupdate()
       end
 
       if editmod == 1 then
-        if mbtn(0) and editmod == 1 then -- add or remove floor
+        if mbtn(0) then -- add or remove floor
           if not f and editspr>=0 then
             lm = lm or {}
             lm.floors = {{cam_z,editspr}}
@@ -124,13 +135,13 @@ function editorupdate()
                   local a,b = newvector2(unpack(v,1,2)),newvector2(unpack(v,3,4))
                   if isvalbetween(cam_z,unpack(v,5,6)) and segmentstouch(a,b,gridmouse,lastgridmouse) then
                     deli(w,i)
+                    lm.chunk = nil
                   else
                     i+=1
                   end
                 end
                 if #w == 0 then
                   lm.walls = nil
-                  lm.solid = nil
                 end
               end
             end
@@ -156,7 +167,8 @@ function editorupdate()
                 if not editwls.editwls.genbyclick then
                   local lm = luamap(pmx,pmy) or {}
                   lm.walls = lm.walls or {}
-                  add(lm.walls,{editwls.x,editwls.y,next.x,next.y,0,1,editspr})
+                  lm.chunk = nil
+                  add(lm.walls,{editwls.x,editwls.y,next.x,next.y,cam_z,cam_z+editwlh,editspr})
                   luamapset(pmx,pmy,lm)
                 end
                 editwls = next
@@ -166,6 +178,13 @@ function editorupdate()
           else
             editwls = nil
           end
+        end
+      elseif editmod==3 then --chunk mode
+        if mbtn(0) then
+          --for each chunk left right above and below
+          --  grab its wall hugging us
+          --  if it's inside our low and high values, delete it and add ours
+          --  on the opposite if ours is inside theirs, skip adding
         end
       end
     else
@@ -234,6 +253,7 @@ function editorupdate()
   editbtn.del.on = editspr<0
   editbtn.floor.on = editmod==1
   editbtn.wall.on = editmod==2
+  editbtn.wall.col = editmod==3 and 12
   cam_z = flr(cam_z*8)/8 - mwhl/8
 end
 
@@ -293,7 +313,7 @@ function editordraw()
     end
     pal()
     fillp(editmod==1 and 0b1010010110100101.1 or 0)
-    if editmod==2 then
+    if editmod>=2 then
       camera(0,0)
       grid()
       camera(editcam:unpack())
@@ -303,9 +323,10 @@ function editordraw()
     for y=ey,ey+16 do
       for x=ex,ex+16 do
         local lm=luamap(x,y)
+        color(lm and lm.chunk and 12 or 7)
         for v in all(lm and lm.walls) do
           local x1,y1,x2,y2,z1,z2,m = unpack(v)
-          if (isvalbetween(cam_z,z1,z2)) line(x1*8,y1*8,x2*8,y2*8,7)
+          if (isvalbetween(cam_z,z1,z2)) line(x1*8,y1*8,x2*8,y2*8)
         end
       end
     end
@@ -362,13 +383,14 @@ function editordraw()
   for _,v in pairs(editbtn) do
     if v[2] < 8 or not editbig then
       local x,y,_,_,i = unpack(v)
-      ?i,x,y,v.on and 7 or 13
+      ?i,x,y,v.on and 7 or v.col or 13
     end
   end
   
   -- info and mouse
   --?"z: "..flr(cam_z).."."..(cam_z%1*8),2,2,7
-  ?"z: "..cam_z,25,2,7
+  ?"z:"..cam_z,25,2,7
+  ?"w:"..editwlh,66,2,7
   ?cursor,mousepos:unpack()
 
   palt()
