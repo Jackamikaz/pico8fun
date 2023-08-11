@@ -48,3 +48,9 @@ end
 function isvalbetween(v,a,b)
   return mid(v,a,b) == v
 end
+
+function overlap(a,b,c,d)
+  if (a>b) a,b=b,a
+  if (c>d) c,d=d,c
+  return a <= d and b >= c
+end

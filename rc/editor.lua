@@ -38,8 +38,8 @@ function addeditbtn(n,x,y,ic,func)
   editbtn[n] = {x,y,x+6,y+6,ic,func}
 end
 
-addeditbtn("small",5,1,icsprs,function() editbig=false editorenter() end)
-addeditbtn("big",13,1,icexpd,function() editbig=true editorenter() end)
+addeditbtn("small",5,1,icsprs,function() editbig=false refreshtopbottom() end)
+addeditbtn("big",13,1,icexpd,function() editbig=true refreshtopbottom() end)
 addeditbtn("tiling",108,1,ictiln,function() editvew=1 end)
 addeditbtn("raycast",116,1,icrcst,function() editvew=2 end)
 addeditbtn("draw",5,88,icrayn,function() if (editspr<0) editspr=-editspr-1 end)
@@ -47,9 +47,14 @@ addeditbtn("del",14,88,icross,function() if (editspr>=0) editspr=-editspr-1 end)
 addeditbtn("floor",35,88,icflor,function() editmod=1 end)
 addeditbtn("wall",44,88,icwall,function() if editmod==2 then editmod=3 else editmod=2 end end)
 
-function editorenter()
+function refreshtopbottom()
   disp_top = -56
   disp_bottom = editbig and 64 or 22
+end
+
+function editorenter()
+  refreshtopbottom()
+  cam_z-=0.5
 end
 
 function editorupdate()
@@ -93,7 +98,7 @@ function editorupdate()
             lm.floors = {{cam_z,editspr}}
             luamapset(x,y,lm)
           else
-            local insert=1
+            local insert=0
             for i,v in ipairs(f) do
               if v[1]==cam_z then
                 insert = nil
@@ -110,7 +115,7 @@ function editorupdate()
               insert = i
             end
             if insert and editspr>=0 then
-              add(f,{cam_z,editspr},insert)
+              add(f,{cam_z,editspr},insert+1)
             end
           end
         elseif mbtn(1) then -- copy floor
@@ -179,7 +184,43 @@ function editorupdate()
         end
       elseif editmod==3 then --chunk mode
         if mbtn(0) then
-
+          local wt = cam_z+editwlh
+          local lmc,nc=lm and lm.chunks,{cam_z,wt,editspr}
+          for i,chk in ipairs(lmc) do
+            if (overlap(chk[1],chk[2],cam_z,wt)) deli(lmc,i) break
+          end
+          local adding = editspr>=0
+          local deltng = not adding
+          if adding then
+            if (not lmc) lmc={}
+            add(lmc,nc)
+          elseif lmc and #lmc==0 then
+            lmc=nil
+          end
+          local function adjustchunk(x,y,side)
+            local lm2,opsd = luamap(x,y),(side+2)%4+4
+            side+=4
+            nc[side] = true
+            for ac in all(lm2 and lm2.chunks) do
+              local z1,z2 = ac[1],ac[2]
+              if cam_z==z1 and wt==z2 then
+                nc[side] = deltng
+                ac[opsd] = deltng
+              elseif cam_z <= z1 and wt >= z2 then
+                ac[opsd] = deltng
+              elseif cam_z >= z1 and wt <= z2 then
+                nc[side] = deltng
+                ac[opsd] = adding
+              end
+            end
+          end
+          adjustchunk(x+1,y,0)
+          adjustchunk(x,y-1,1)
+          adjustchunk(x-1,y,2)
+          adjustchunk(x,y+1,3)
+          if (not lm) lm={}
+          lm.chunks = lmc
+          luamapset(x,y,lm)
         end
       end
     else
