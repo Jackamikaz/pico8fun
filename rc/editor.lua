@@ -38,8 +38,8 @@ function addeditbtn(n,x,y,ic,func)
   editbtn[n] = {x,y,x+6,y+6,ic,func}
 end
 
-addeditbtn("small",5,1,icsprs,function() editbig=false end)
-addeditbtn("big",13,1,icexpd,function() editbig=true end)
+addeditbtn("small",5,1,icsprs,function() editbig=false editorenter() end)
+addeditbtn("big",13,1,icexpd,function() editbig=true editorenter() end)
 addeditbtn("tiling",108,1,ictiln,function() editvew=1 end)
 addeditbtn("raycast",116,1,icrcst,function() editvew=2 end)
 addeditbtn("draw",5,88,icrayn,function() if (editspr<0) editspr=-editspr-1 end)
@@ -48,8 +48,8 @@ addeditbtn("floor",35,88,icflor,function() editmod=1 end)
 addeditbtn("wall",44,88,icwall,function() if editmod==2 then editmod=3 else editmod=2 end end)
 
 function editorenter()
-  disp_top = -55
-  disp_bottom = editbig and 64 or 21
+  disp_top = -56
+  disp_bottom = editbig and 64 or 22
 end
 
 function editorupdate()
@@ -135,7 +135,6 @@ function editorupdate()
                   local a,b = newvector2(unpack(v,1,2)),newvector2(unpack(v,3,4))
                   if isvalbetween(cam_z,unpack(v,5,6)) and segmentstouch(a,b,gridmouse,lastgridmouse) then
                     deli(w,i)
-                    lm.chunk = nil
                   else
                     i+=1
                   end
@@ -167,7 +166,6 @@ function editorupdate()
                 if not editwls.editwls.genbyclick then
                   local lm = luamap(pmx,pmy) or {}
                   lm.walls = lm.walls or {}
-                  lm.chunk = nil
                   add(lm.walls,{editwls.x,editwls.y,next.x,next.y,cam_z,cam_z+editwlh,editspr})
                   luamapset(pmx,pmy,lm)
                 end
@@ -181,10 +179,7 @@ function editorupdate()
         end
       elseif editmod==3 then --chunk mode
         if mbtn(0) then
-          --for each chunk left right above and below
-          --  grab its wall hugging us
-          --  if it's inside our low and high values, delete it and add ours
-          --  on the opposite if ours is inside theirs, skip adding
+
         end
       end
     else
@@ -323,10 +318,22 @@ function editordraw()
     for y=ey,ey+16 do
       for x=ex,ex+16 do
         local lm=luamap(x,y)
-        color(lm and lm.chunk and 12 or 7)
-        for v in all(lm and lm.walls) do
-          local x1,y1,x2,y2,z1,z2,m = unpack(v)
-          if (isvalbetween(cam_z,z1,z2)) line(x1*8,y1*8,x2*8,y2*8)
+          if lm then
+          for v in all(lm.walls) do
+            local x1,y1,x2,y2,z1,z2,m = unpack(v)
+            if (isvalbetween(cam_z,z1,z2)) line(x1*8,y1*8,x2*8,y2*8,7)
+          end
+          for c in all(lm.chunks) do
+            local z1,z2,s,a,b,c,d = unpack(c)
+            if isvalbetween(cam_z,z1,z2) then
+              local xl,xr,yt,yb = x*8,x*8+7,y*8,y*8+7
+              color(12)
+              if (a) line(xr,yb,xr,yt)
+              if (b) line(xr,yt,xl,yt)
+              if (c) line(xl,yt,xl,yb)
+              if (d) line(xl,yb,xr,yb)
+            end
+          end
         end
       end
     end

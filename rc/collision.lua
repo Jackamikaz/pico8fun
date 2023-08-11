@@ -133,7 +133,7 @@ end
 
     --local m = mget(mx, my)
     local m = luamap(mx,my)
-    if m and m.chunk then
+    if m and m.chunks then
       if m.x1 then
         local cx,cy = lineintersection(px,py,x2,y2,m.x1,m.y1,m.x2,m.y2)
         if cx and cx >= mx and cx <= mx + 1 and cy >= my and cy <= my + 1 then

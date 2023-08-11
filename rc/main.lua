@@ -37,17 +37,17 @@ function() -- 2D DRAW ------------------------------
     print(pointintriangle(mx,my,px,py,xl,yl,xr,yr),mx+6,my+2,7)
   end
 end,
-function() -- CLASSIC RAYCAST ------------------------------
-  camera(-64,-64)
-  floorcast(0)
-  raycast()
-end,
+--function() -- CLASSIC RAYCAST ------------------------------
+--  camera(-64,-64)
+--  floorcast(0)
+--  raycast()
+--end,
 function() -- MY "GRIDCASTING" ------------------------------
   camera(-64,-64)
   disperscan(traverse3Dcell,ordhandlerdraw)
 end}
 
-currentdraw = 3
+currentdraw = 2
 
 modes = {
 play={
@@ -76,6 +76,7 @@ fps=60}
 }
 
 function switchmode(mode)
+  mode.enter()
   local fps = mode.fps
   _set_fps(fps)
   if fps == 30 then

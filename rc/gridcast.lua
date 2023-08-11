@@ -228,7 +228,7 @@ function traverse3Dcell(x,y,ordhandler)
       local d = sqrdst3(cam_x,cam_y,cam_z,x+0.5,y+0.5,f[1])
       addordered(ord,{d,1,x,y,f[1],f[2],f},ordcomp)
     end
-    for w in all(lm.walls) do
+    for w in all(luamapgetwalls(x,y)) do
       local x1,y1,x2,y2,z1,z2,m = unpack(w)
       local d = sqrdst3(cam_x,cam_y,cam_z,(x1+x2)*0.5,(y1+y2)*0.5,(z1+z2)*0.5)
       addordered(ord,{d,2,x1,y1,x2,y2,z1,z2,m,w},ordcomp)

@@ -2,6 +2,24 @@ function luamapset(x,y,v)
   luamap[x | y << 8] = v
 end
 
+function luamapgetwalls(x,y)
+  local ret={}
+  local lm = luamap(x,y)
+  if lm then
+    for w in all(lm.walls) do
+      add(ret,w)
+    end
+    for c in all(lm.chunks) do
+      local z1,z2,spr = c[1],c[2],c[3]
+      if (c[4]) add(ret,{x+1,y+1,x+1,y,z1,z2,spr})
+      if (c[5]) add(ret,{x+1,y,x,y,z1,z2,spr})
+      if (c[6]) add(ret,{x,y,x,y+1,z1,z2,spr})
+      if (c[7]) add(ret,{x,y+1,x+1,y+1,z1,z2,spr})
+    end
+  end
+  return ret
+end
+
 function buildluamap()
   luamap = setmetatable({},{__call = function(self,x,y) return self[x | y << 8] end})
 
@@ -12,22 +30,28 @@ function buildluamap()
       if x==10 and y==5 then
         luamapset(x,y,{walls={{x+0.1,y+1,x+0.1,y,0,1,20}}, floors={{0,m}}})
       elseif fget(m, 0) then
-        local w = {}
-        local h = 1
-        if (m==1) h=2 --high walls
-        if not fget(mget(x-1,y),0) then
-          add(w,{x,y,x,y+1,0,h,m})
-        end
-        if not fget(mget(x+1,y),0) then
-          add(w,{x+1,y+1,x+1,y,0,h,m})
-        end
-        if not fget(mget(x,y-1),0) then
-          add(w,{x+1,y,x,y,0,h,m})
-        end
-        if not fget(mget(x,y+1),0) then
-          add(w,{x,y+1,x+1,y+1,0,h,m})
-        end
-        luamapset(x,y,{walls=w,chunk=true})
+        -- local h = 1
+        -- if (m==1) h=2 --high walls
+        -- local w = {}
+        -- if not fget(mget(x-1,y),0) then
+        --   add(w,{x,y,x,y+1,0,h,m})
+        -- end
+        -- if not fget(mget(x+1,y),0) then
+        --   add(w,{x+1,y+1,x+1,y,0,h,m})
+        -- end
+        -- if not fget(mget(x,y-1),0) then
+        --   add(w,{x+1,y,x,y,0,h,m})
+        -- end
+        -- if not fget(mget(x,y+1),0) then
+        --   add(w,{x,y+1,x+1,y+1,0,h,m})
+        -- end
+        -- luamapset(x,y,{walls=w,chunk=true})
+        luamapset(x,y,
+        {chunks={{0,m==1 and 2 or 1,m,
+          not fget(mget(x+1,y),0),
+          not fget(mget(x,y-1),0),
+          not fget(mget(x-1,y),0),
+          not fget(mget(x,y+1),0)}}})
       elseif m~=0 then
         luamapset(x,y,{floors={{0,m}}})
       end
@@ -68,7 +92,6 @@ function buildluamap()
 
     lm.floors = floors
     lm.walls = walls
-    lm.chunk = true
     luamapset(x,y,lm)
   end
 

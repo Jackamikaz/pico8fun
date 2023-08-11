@@ -37,7 +37,10 @@ function printv(s,...)
   local v = {...}
   local r = ""
   for i,n in ipairs(split(s)) do
-    r = r..n.."="..v[i].." "
+    local c=v[i]
+    if (type(c)=="boolean") c = c and "true" or "false"
+    if (type(c)=="table") c = "{}"
+    r = r..n.."="..c.." "
   end
   printh(r)
 end

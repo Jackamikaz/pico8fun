@@ -13,7 +13,7 @@ __lua__
 #include camera.lua
 #include palette.lua
 #include luamap.lua
-#include raycast.lua
+--#include raycast.lua
 #include disperscan.lua
 #include gridcast.lua
 #include p8sciiparser.lua

@@ -30,7 +30,7 @@ function player.update(_ENV)
   
   local lm = luamap(flr(pos.x), flr(pos.y))
   local touchingladder = false
-  if lm and not lm.chunk and lm.walls
+  if lm and not lm.chunks and lm.walls
   and alt < max(lm.walls[1][5],lm.walls[1][6])
   and sqrlinedist(pos.x,pos.y,unpack(lm.walls[1],1,4)) <= radius*radius then
     touchingladder = true
@@ -72,7 +72,7 @@ function player.update(_ENV)
 
   local function wallat(x,y)
     local lm = luamap(x,y)
-    return lm and lm.chunk and alt < lm.walls[1][6] and alt+height > lm.walls[1][5]
+    return lm and lm.chunks and alt < lm.chunks[1][2] and alt+height > lm.chunks[1][1]
   end
 
   local my = flr(pos.y)
