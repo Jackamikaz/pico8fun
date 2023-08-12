@@ -63,9 +63,7 @@ function editorupdate()
   cursor = icarrw
 
   local x,y = ((editcam+mousepos)\8):unpack()
-  local lm = luamap(x,y)
-  local f = lm and lm.floors
-
+  local lm = luamapsafe(x,y)
 
   for _,v in pairs(editbtn) do
     if (not editbig or v[2] < 8) and isvecinrect(mousepos,unpack(v)) then
@@ -92,31 +90,26 @@ function editorupdate()
       end
 
       if editmod == 1 then
+        local f=lm.floors
         if mbtn(0) then -- add or remove floor
-          if not f and editspr>=0 then
-            lm = lm or {}
-            lm.floors = {{cam_z,editspr}}
-            luamapset(x,y,lm)
-          else
-            local insert=0
-            for i,v in ipairs(f) do
-              if v[1]==cam_z then
-                insert = nil
-                if editspr < 0 then
-                  deli(f,i)
-                  if (#f==0) lm.floors=nil
-                else
-                  v[2] = editspr
-                end
-                break
-              elseif v[1] > cam_z then
-                break
+          local insert=0
+          for i,v in ipairs(f) do
+            if v[1]==cam_z then
+              insert = nil
+              if editspr < 0 then
+                deli(f,i)
+                if (#f==0) lm.floors=nil
+              else
+                v[2] = editspr
               end
-              insert = i
+              break
+            elseif v[1] > cam_z then
+              break
             end
-            if insert and editspr>=0 then
-              add(f,{cam_z,editspr},insert+1)
-            end
+            insert = i
+          end
+          if insert and editspr>=0 then
+            add(f,{cam_z,editspr},insert+1)
           end
         elseif mbtn(1) then -- copy floor
           if (editspr>=0) editspr=-editspr-1
@@ -132,22 +125,18 @@ function editorupdate()
         if editspr<0 then
           if mbtn(0) then
             local function trydelwall(mx,my)
-              local lm=luamap(mx,my)
-              if lm and lm.walls then
-                local w,i = lm.walls,1
-                while i<=#w do
-                  local v=w[i]
-                  local a,b = newvector2(unpack(v,1,2)),newvector2(unpack(v,3,4))
-                  if isvalbetween(cam_z,unpack(v,5,6)) and segmentstouch(a,b,gridmouse,lastgridmouse) then
-                    deli(w,i)
-                  else
-                    i+=1
-                  end
-                end
-                if #w == 0 then
-                  lm.walls = nil
+              local lm=luamapsafe(mx,my)
+              local w,i = lm.walls,1
+              while i<=#w do
+                local v=w[i]
+                local a,b = newvector2(unpack(v,1,2)),newvector2(unpack(v,3,4))
+                if isvalbetween(cam_z,unpack(v,5,6)) and segmentstouch(a,b,gridmouse,lastgridmouse) then
+                  deli(w,i)
+                else
+                  i+=1
                 end
               end
+              luamapset(mx,my,lm)
             end
             trydelwall(prvmap:unpack())
             if (prvmap~=newmap) trydelwall(newmap:unpack())
@@ -169,13 +158,11 @@ function editorupdate()
                 -- add wall here
                 local next = newvector2(raydda:point())
                 if not editwls.editwls.genbyclick then
-                  local lm = luamap(pmx,pmy) or {}
-                  lm.walls = lm.walls or {}
+                  local lm = luamapsafe(pmx,pmy)
                   add(lm.walls,{editwls.x,editwls.y,next.x,next.y,cam_z,cam_z+editwlh,editspr})
                   luamapset(pmx,pmy,lm)
                 end
                 editwls = next
-                --printv("wx,wy",editwls.x,editwls.y)
               until raydda.mx==newmap.x and raydda.my==newmap.y or raydda.d >=ls
             end
           else
@@ -185,18 +172,13 @@ function editorupdate()
       elseif editmod==3 then --chunk mode
         if mbtn(0) then
           local wt = cam_z+editwlh
-          local lmc,nc=lm and lm.chunks,{cam_z,wt,editspr}
+          local lmc,nc=lm.chunks,{cam_z,wt,editspr}
           for i,chk in ipairs(lmc) do
             if (overlap(chk[1],chk[2],cam_z,wt)) deli(lmc,i) break
           end
           local adding = editspr>=0
           local deltng = not adding
-          if adding then
-            if (not lmc) lmc={}
-            add(lmc,nc)
-          elseif lmc and #lmc==0 then
-            lmc=nil
-          end
+          if (adding) add(lmc,nc)
           local function adjustchunk(x,y,side)
             local lm2,opsd = luamap(x,y),(side+2)%4+4
             side+=4
@@ -218,9 +200,6 @@ function editorupdate()
           adjustchunk(x,y-1,1)
           adjustchunk(x-1,y,2)
           adjustchunk(x,y+1,3)
-          if (not lm) lm={}
-          lm.chunks = lmc
-          luamapset(x,y,lm)
         end
       end
     else
@@ -280,6 +259,8 @@ function editorupdate()
       if (mbtnp(0)) editspr = edittab*64 + mousepos.x\8 + (mousepos.y-96)\8*16
     end
   end
+
+  luamapset(x,y,lm)
   
   editbtn.small.on = not editbig
   editbtn.big.on = editbig

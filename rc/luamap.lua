@@ -1,5 +1,22 @@
 function luamapset(x,y,v)
+  if v then
+    local _ENV=v
+    if (chunks and #chunks==0) chunks=nil
+    if (walls and #walls==0) walls=nil
+    if (floors and #floors==0) floors=nil
+    if (not(chunks or walls or floors)) v=nil
+  end
   luamap[x | y << 8] = v
+end
+
+function luamapsafe(x,y)
+  local lm=luamap(x,y)
+  if (not lm) lm={}
+  local _ENV=lm
+  if (not chunks) chunks={}
+  if (not walls) walls={}
+  if (not floors) floors={}
+  return lm
 end
 
 function luamapgetwalls(x,y)
