@@ -66,6 +66,8 @@ draw=function()
   end
 
   drawmethods[currentdraw]()
+
+  testclip(2,2)
 end,
 fps=30},
 edit={
@@ -100,5 +102,5 @@ function _init()
     i += 1
   end
 
-  switchmode(modes.edit)
+  switchmode(modes.play)
 end
