@@ -191,25 +191,42 @@ function drawwall(x1, y1, x2, y2, z1, z2, sp)
 
   -- confine to the screen edges
   if (x2 < -64 or x1 > 64) return
-  if x1 < -64 then
-    local d = -64-x1
+  if x1 < -65 then
+    local d = -65-x1
     y1 += tt*d
     y1b += bt*d
     d1 += dt*d
-    x1 = -64
+    x1 = -65
   end
   local x2b = x2
   if (x2b > 64) x2b = 64
 
+  -- sub pixel shift
+  local cx1 = x1\1+1
+  local sx = cx1-x1
+  y1 += tt*sx
+  y1b += bt*sx
+  d1 += dt*sx
+
+  local prec=4--(time()*2)\1%5
+  local prec2=prec*2
+  tline(13+prec)
+
   -- draw!
-  for x=x1,x2b do
+  for x=cx1,x2b do
     local t = (x2-x)/dx
     local u = ((1-t)*t1/w1+t*t2/w2)/((1-t)/w1+t/w2)
     pald(d1)
+    local cy1,cy1b = y1\1,y1b\1+1
     if sp==1 then
-      tline(x,y1b,  x,y1+y1b%1,  u*2,4,  0,(z1-z2)/(y1-y1b)*2)
+      local sa,dab=cy1b-y1b<<prec,y1-y1b<<prec
+      u*=2
+      local v=(z1-z2)*2
+      local dav=((v<<prec2)/dab)
+      tline(x,cy1b,x,cy1,  u<<prec,((4<<prec)+((sa*dav)>>prec)),0,dav)
+      --tline(x,cy1b,  x,cy1,  u*2,4,  0,(z1-z2)/(cy1-cy1b)*2)
     else
-      sspr((sp%16+u)*8,sp\16*8,1,8,x,y1b,1,y1-flr(y1b))
+      sspr((sp%16+u)*8,sp\16*8,1,8,x,cy1b,1,cy1-cy1b)
     end
     --line(x,y1,x,y1b)
 
@@ -217,6 +234,8 @@ function drawwall(x1, y1, x2, y2, z1, z2, sp)
     y1b += bt
     d1 += dt
   end
+
+  tline(13)
 end
 
 function traverse3Dcell(x,y,ordhandler)
