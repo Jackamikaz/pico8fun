@@ -31,7 +31,7 @@ function tpoly(poly)
 		local _x1,_y1,_z1,_u1,_v1=x1,y1,z1,u1,v1
 		if(y0>y1) x0,y0,z0,x1,y1,z1,u0,v0,u1,v1=x1,y1,z1,x0,y0,z0,u1,v1,u0,v0
 		local z0o,t,dy=z0,0,y1-y0
-		local dx,dz,dt=(x1-x0)/dy,(z1-z0)/dy,1/dy
+		local dx,dz,dt=(x1-x0)/dy,(z1-z0)/dy,256/dy
 		local cy0=y0\1+1
     local topcut = y0-disp_top
 		if(topcut<0) x0-=topcut*dx z0-=topcut*dz t-=topcut*dt y0=disp_top cy0=disp_top
@@ -43,7 +43,7 @@ function tpoly(poly)
 		if(y1>disp_bottom) y1=disp_bottom
 		for y=cy0,y1 do
 			local span=spans[y]
-      local omt = 1-t
+      local omt = 256-t
       local det = omt/z0o+t/z1
       local u,v=(omt*u0/z0o+t*u1/z1)/det,(omt*v0/z0o+t*v1/z1)/det
 			if span then
@@ -91,12 +91,12 @@ function clippolyh(poly,cuty)
 end
 
 function drawfloortile(fx, fy, fz, s)
-  local s,alt,x1,y1 = s*2+0.5,cam_z-fz,worldtocam(fx,fy)
+  local alt,x1,y1 = cam_z-fz,worldtocam(fx,fy)
   local poly={
-    {x1,y1,0,s,0.5},
-    {x1+cam_dircos,y1+cam_dirsin,0,s+1,0.5},
-    {x1+cam_dircos-cam_dirsin,y1+cam_dirsin+cam_dircos,0,s+1,1.5},
-    {x1-cam_dirsin,y1+cam_dircos,0,s,1.5}
+    {x1,y1,0,s,0},
+    {x1+cam_dircos,y1+cam_dirsin,0,s+1,0},
+    {x1+cam_dircos-cam_dirsin,y1+cam_dirsin+cam_dircos,0,s+1,1},
+    {x1-cam_dirsin,y1+cam_dircos,0,s,1}
   }
   clippolyh(poly,cam_near)
   if (#poly==0) return
