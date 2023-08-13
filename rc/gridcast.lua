@@ -44,7 +44,7 @@ function tpoly(poly)
       local span=spans[y]
       local omt = 256-t
       local det = omt/z0o+t/z1
-      local u,v=(omt*u0/z0o+t*u1/z1)/det,(omt*v0/z0o+t*v1/z1)/det
+      local u,v = (omt*u0/z0o+t*u1/z1)/det,(omt*v0/z0o+t*v1/z1)/det
       --local u,v=omt*u0+t*u1>>8,omt*v0+t*v1>>8
       if span then
         local ax,au,av,bx,bu,bv=x0,u,v,span[1],span[2],span[3]
@@ -66,6 +66,91 @@ function tpoly(poly)
       t+=dt
     end
     x0,y0,z0,u0,v0=_x1,_y1,_z1,_u1,_v1
+  end
+end
+
+function warpindex(i,s)
+  return (i-1)%s+1
+end
+
+function tpolyb(poly)
+  local ps,topy,topi=#poly,0x7fff
+  for i=1,ps do
+    local y=poly[i][2]
+    if (y<topy) topy=y topi=i
+  end
+  local dir=-1--sgn(poly[warpindex(topi+1,ps)][1]-poly[topi][1])
+  local li,ri,lin,rin,lyt,ryt,lx,rx,lz,rz,llz,rlz,lnz,rnz,lt,rt,ldx,rdx,ldz,rdz,ldt,rdt=warpindex(topi+dir,ps),warpindex(topi-dir,ps),topi,topi,topy,topy
+  local fp=poly[topi]
+  local lu1,lv1,ru1,rv1,lu0,lv0,ru0,rv0
+  local c=0
+  for y=max(topy\1+1,disp_top),disp_bottom do
+    while y>lyt do
+      c+=1
+      if (c>ps) return
+      --if (lin==ri) return
+      li=lin
+      lin=warpindex(lin-dir,ps)
+      local pli,plin=poly[li],poly[lin]
+      lx,lz,lt=pli[1],pli[3],0
+      lu0,lv0,lu1,lv1=pli[4],pli[5],plin[4],plin[5]
+      local nx,ny,nz=plin[1],plin[2],plin[3]
+      llz,lnz=lz,nz
+      local dy=ny-lyt
+      local sy=y-lyt
+      lyt=ny
+      ldx = (nx-lx)/dy
+      ldz = (nz-lz)/dy
+      ldt = 256/dy
+      lx += sy*ldx
+      lz += sy*ldz
+      lt += sy*ldt
+    end
+    while y>ryt do
+      c+=1
+      if (c>ps) return
+      --if (rin==li) return
+      ri=rin
+      rin=warpindex(rin+dir,ps)
+      local pri,prin=poly[ri],poly[rin]
+      rx,rz,rt=pri[1],pri[3],0
+      ru0,rv0,ru1,rv1=pri[4],pri[5],prin[4],prin[5]
+      local nx,ny,nz=prin[1],prin[2],prin[3]
+      rlz,rnz=lz,nz
+      local dy=ny-ryt
+      local sy=y-ryt
+      ryt=ny
+      rdx = (nx-rx)/dy
+      rdz = (nz-rz)/dy
+      rdt = 256/dy
+      rx += sy*rdx
+      rz += sy*rdz
+      rt += sy*rdt
+    end
+
+    local omt = 256-lt
+    local det = omt/llz+lt/lnz
+    local lu,lv=(omt*lu0/llz+lt*lu1/lnz)/det,(omt*lv0/llz+lt*lv1/lnz)/det
+    --local lu,lv=lu0*omt+lu1*lt>>8,lv0*omt+lv1*lt>>8
+
+    omt = 256-rt
+    det = omt/rlz+rt/rnz
+    local ru,rv=(omt*ru0/rlz+rt*ru1/rnz)/det,(omt*rv0/rlz+rt*rv1/rnz)/det
+    --local ru,rv=ru0*omt+ru1*rt>>8,rv0*omt+rv1*rt>>8
+
+    local clx,crx=lx\1+1,rx\1
+    local sa,dab=clx-lx,rx-lx
+    local dau,dav=(ru-lu)/dab,(rv-lv)/dab
+    pald(rz)
+    tline(clx,y,crx,y,lu+sa*dau,lv+sa*dav,dau,dav)
+    --rectfill(clx,y,crx,y,5+c)
+
+    lx+=ldx
+    rx+=rdx
+    lz+=ldz
+    rz+=rdz
+    lt+=ldt
+    rt+=rdt
   end
 end
 
@@ -105,7 +190,12 @@ function drawfloortile(fx, fy, fz, s)
     local df = projplanedist / p[2]
     p[1],p[2],p[3] = p[1]*df, alt*df, p[2]
   end
-  tpoly(poly)
+  
+  if btn(🅾️) then
+    tpoly(poly)
+  else
+    tpolyb(poly)
+  end
 end
 
 function drawwall(x1, y1, x2, y2, z1, z2, sp)
