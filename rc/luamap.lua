@@ -131,31 +131,31 @@ function buildluamap()
   --end
 
   -- rework floor sprites for their tline'ing
-  -- poke(0x5f55,0x00)
-  -- for i=1,127 do
-  --   if fget(i) == 0 then
-  --     rectfill(0,0,7,7,0)
-  --     spr(i,0,0)
-  --     local x,y = i*8%128,i\16*8
-  --     rectfill(x,y,x+7,y+7,0)
-  --     sspr(4,4,4,4,x  ,y  )
-  --     sspr(0,4,4,4,x+4,y  )
-  --     sspr(0,0,4,4,x+4,y+4)
-  --     sspr(4,0,4,4,x  ,y+4)
-  --   end
-  -- end
-  -- poke(0x5f55,0x60)
+  poke(0x5f55,0x00)
+  for i=1,127 do
+    if fget(i) == 0 then
+      rectfill(0,0,7,7,0)
+      spr(i,0,0)
+      local x,y = i*8%128,i\16*8
+      rectfill(x,y,x+7,y+7,0)
+      sspr(4,4,4,4,x  ,y  )
+      sspr(0,4,4,4,x+4,y  )
+      sspr(0,0,4,4,x+4,y+4)
+      sspr(4,0,4,4,x  ,y+4)
+    end
+  end
+  poke(0x5f55,0x60)
 
   -- set the map for "tline'ing the sprite sheet"
   for i=0,127 do
-    mset(i,0,i)
+    local x,y = i*2%128,i\64*2
+    mset(x,y,i)
+    mset(x+1,y,i)
+    mset(x,y+1,i)
+    mset(x+1,y+1,i)
   end
   -- for i=0,127 do
-  --   local x,y = i*2%128,i\64*2
-  --   mset(x,y,i)
-  --   mset(x+1,y,i)
-  --   mset(x,y+1,i)
-  --   mset(x+1,y+1,i)
+  --   mset(i,0,i)
   -- end
 
   -- sampling section for the walls

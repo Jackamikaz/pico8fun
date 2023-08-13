@@ -91,12 +91,12 @@ function clippolyh(poly,cuty)
 end
 
 function drawfloortile(fx, fy, fz, s)
-  local alt,x1,y1 = cam_z-fz,worldtocam(fx,fy)
+  local s,alt,x1,y1 = s*2+0.5,cam_z-fz,worldtocam(fx,fy)
   local poly={
-    {x1,y1,0,s,0},
-    {x1+cam_dircos,y1+cam_dirsin,0,s+1,0},
-    {x1+cam_dircos-cam_dirsin,y1+cam_dirsin+cam_dircos,0,s+1,1},
-    {x1-cam_dirsin,y1+cam_dircos,0,s,1}
+    {x1,y1,0,s,0.5},
+    {x1+cam_dircos,y1+cam_dirsin,0,s+1,0.5},
+    {x1+cam_dircos-cam_dirsin,y1+cam_dirsin+cam_dircos,0,s+1,1.5},
+    {x1-cam_dirsin,y1+cam_dircos,0,s,1.5}
   }
   clippolyh(poly,cam_near)
   if (#poly==0) return
