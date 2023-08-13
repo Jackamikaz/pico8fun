@@ -240,3 +240,131 @@ function round(val)
   local d = val % 1
   if d < 0.5 then return flr(val) else return flr(val+1) end
 end
+
+function drawfloortileold(fx, fy, fz, s)
+  -- local x1,y1 = worldtocam(fx,fy)
+  -- local x2,y2 = worldtocam(fx+1,fy)
+  -- local x3,y3 = worldtocam(fx+1,fy+1)
+  -- local x4,y4 = worldtocam(fx,fy+1)
+  local ox,oy = fx-s*2-0.5,fy-0.5
+
+  local x1,y1 = worldtocam(fx,fy)
+  local x2,y2 = x1+cam_dircos,y1+cam_dirsin
+  local x3,y3 = x1+cam_dircos-cam_dirsin,y1+cam_dirsin+cam_dircos
+  local x4,y4 = x1-cam_dirsin,y1+cam_dircos
+
+  -- local dx,dy = (cam_dircos-cam_dirsin)*0.5,(cam_dirsin+cam_dircos)*0.5
+  -- local x1,y1 = fx-dx,fy-dy
+  -- local x2,y2 = fx-dy,fy+dx
+  -- local x3,y3 = fx+dx,fy+dy
+  -- local x4,y4 = fx+dy,fy-dx
+  -- ox,oy = ox-s*2-0.5,oy-0.5
+
+  if (y1 < y2) x1,y1,x2,y2 = x2,y2,x1,y1
+  if (y3 < y4) x3,y3,x4,y4 = x4,y4,x3,y3
+  if (y1 < y3) x1,y1,x3,y3 = x3,y3,x1,y1
+  if (y2 < y4) x2,y2,x4,y4 = x4,y4,x2,y2
+  if (y2 < y3) x2,y2,x3,y3 = x3,y3,x2,y2
+
+  if (y1 < cam_near) return
+
+  local alt,tra = cam_z-fz,3
+  local x2b,x3b,x4b
+
+  if y2 < cam_near then
+    tra = 1
+    x2,y2 = x1+(x2-x1)/(y2-y1)*(cam_near-y1),cam_near
+  end
+
+  x2b = x1+(x4-x1)/(y4-y1)*(y2-y1)
+  x3b = x1+(x3-x1)/(y3-y1)*(y2-y1)
+
+  if abs(x2b - x2) < abs(x3b- x2) then
+    x2b = x3b
+    x3b = x2+(x4-x2)/(y4-y2)*(y3-y2)
+  else
+    x3b = x1+(x4-x1)/(y4-y1)*(y3-y1)
+  end
+
+  if (x2b < x2) x2, x2b = x2b, x2
+  if (x3b < x3) x3, x3b = x3b, x3
+
+  if tra > 1 then
+    if y3 < cam_near then
+      tra = 2
+      x3 = x2+(x3-x2)/(y3-y2)*(cam_near-y2)
+      x3b = x2b+(x3b-x2b)/(y3-y2)*(cam_near-y2)
+      y3 = cam_near
+    else
+      x4b = x4
+      if y4 < cam_near then
+        x4 = x4+(x4-x3)/(y3-y4)*(y4-cam_near)
+        x4b = x4b+(x4b-x3b)/(y3-y4)*(y4-cam_near)
+        y4 = cam_near
+      end
+    end
+  end
+  
+  --[[debug
+  if fz==1 then
+    local s = -30
+    line(-60,cam_near*s,60,cam_near*s,13)
+    line(x1*s,y1*s,x2*s,y2*s,7)
+    line(x1*s,y1*s,x2b*s,y2*s,7)
+    line(x2*s,y2*s,x2b*s,y2*s,7)
+
+    if tra >= 2 then
+      line(x2*s,y2*s,x3*s,y3*s,7)
+      line(x2b*s,y2*s,x3b*s,y3*s,7)
+      line(x3*s,y3*s,x3b*s,y3*s,7)
+    end
+
+    if tra >= 3 then
+      line(x3*s,y3*s,x4*s,y4*s,7)
+      line(x3b*s,y3*s,x4b*s,y4*s,7)
+      line(x4*s,y4*s,x4b*s,y4*s,7)
+    end
+  end--]]
+
+  local df = projplanedist / y1
+  x1,y1 = x1*df, alt*df
+
+  df = projplanedist / y2
+  x2,x2b,y2 = x2*df, x2b*df, alt*df
+  floortrapeze(x1,x1,x2,x2b,y1,y2,alt,ox,oy)
+
+  if (tra < 2) return
+  df = projplanedist / y3
+  x3,x3b,y3 = x3*df, x3b*df, alt*df
+  floortrapeze(x2,x2b,x3,x3b,y2,y3,alt,ox,oy)
+
+  if (tra < 3) return
+  df = projplanedist / y4
+  x4,x4b,y4 = x4*df, x4b*df, alt*df
+  floortrapeze(x3,x3b,x4,x4b,y3,y4,alt,ox,oy)
+end
+
+function floortrapeze(l,r,lt,rt,y1,y2,alt,ox,oy)
+  if (y1==y2) return
+  local s=sgn(y2-y1)
+  lt,rt=(lt-l)/(y2-y1)*s,(rt-r)/(y2-y1)*s
+  
+  for y1=y1,mid(y2,disp_top,disp_bottom),s do
+    if r >= -64 and l < 64 then
+      local la,ra = mid(-64,flr(l), 63), mid(-64,flr(r), 63)
+
+      local lx,ly = getfloorpos(la,y1,alt)
+      local rx,ry = getfloorpos(ra,y1,alt)
+
+      local sd = ra-la
+      pald(projplanedist*alt/y1)
+      tline(la,y1,ra,y1,lx-ox,ly-oy,(rx-lx)/sd,(ry-ly)/sd)
+      --rectfill(la,y1,ra,y1,7)
+
+      --pset(la,y1,7) pset(ra,y1,8)
+    end
+
+    l+=lt
+    r+=rt
+  end
+end

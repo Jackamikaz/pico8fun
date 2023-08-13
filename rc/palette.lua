@@ -9,19 +9,20 @@ function initfadepal()
   currentfadepal=0
 end
 
+function setfadepal(newpal)
+    -- thanks to freds72 again https://freds72.itch.io/poom/devlog/241700/journey-to-poom
+    if(currentfadepal!=newpal) memcpy(0x5f00,0x4300|newpal<<4,16) currentfadepal=newpal
+end
+
 -- sets a darkened palette depending on distance
 function pald(d)
-  local newfadepal
   if d > cam_far then
-    newfadepal = 3
+    setfadepal(3)
   elseif d > cam_far-1 then
-    newfadepal = 2
+    setfadepal(2)
   elseif d > cam_far-2 then
-    newfadepal = 1
+    setfadepal(1)
   else
-    newfadepal = 0
+    setfadepal(0)
   end
-
-  -- thanks to freds72 again https://freds72.itch.io/poom/devlog/241700/journey-to-poom
-  if(currentfadepal!=newfadepal) memcpy(0x5f00,0x4300|newfadepal<<4,16) currentfadepal=newfadepal
 end

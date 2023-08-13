@@ -278,11 +278,11 @@ function topdowndepth(d)
   d=cam_z-d
   if (not isvalbetween(d,0,2)) return
   if d==0 then
-    pal()
+    setfadepal(0)
   elseif d<1 then
-    pal(fadepal[1])
+    setfadepal(1)
   else
-    pal(fadepal[2])
+    setfadepal(2)
   end
   return true
 end
