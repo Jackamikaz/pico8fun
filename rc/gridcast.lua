@@ -21,49 +21,50 @@ function worldtocam(wx,wy)
 end
 
 -- tpoly from freds72 picocad client https://github.com/freds72/picocad-client 
-function tpoly(v,uv)
-	local p0,spans=v[#v],{}
-	local x0,y0=p0.x,p0.y
-	local u0,v0=uv[#uv-1],uv[#uv]
+function tpoly(poly)
+  local p0=poly[#poly]
+	local spans,x0,y0,z0,u0,v0={},p0[1],p0[2],p0[3],p0[4],p0[5]
 	-- ipairs is slower for small arrays
-	for i=1,#v do
-		local p1=v[i]
-		local x1,y1=p1.x,p1.y
-		local u1,v1=uv[2*i-1],uv[2*i]
-		local _x1,_y1,_u1,_v1=x1,y1,u1,v1
-		if(y0>y1) x0,y0,x1,y1,u0,v0,u1,v1=x1,y1,x0,y0,u1,v1,u0,v0
+	for i=1,#poly do
+    local p1=poly[i]
+		local x1,y1,z1,u1,v1=p1[1],p1[2],p1[3],p1[4],p1[5]
+		local _x1,_y1,_z1,_u1,_v1=x1,y1,z1,u1,v1
+		if(y0>y1) x0,y0,z0,x1,y1,z1,u0,v0,u1,v1=x1,y1,z1,x0,y0,z0,u1,v1,u0,v0
 		local dy=y1-y0
-		local dx,du,dv=(x1-x0)/dy,(u1-u0)/dy,(v1-v0)/dy
+		local dx,dz,du,dv=(x1-x0)/dy,(z1-z0)/dy,(u1-u0)/dy,(v1-v0)/dy
 		local cy0=y0\1+1
-		if(y0<0) x0-=y0*dx u0-=y0*du v0-=y0*dv y0=0 cy0=0
+    local topcut = y0-disp_top
+		if(topcut<0) x0-=topcut*dx z0-=topcut*dz u0-=topcut*du v0-=topcut*dv y0=disp_top cy0=disp_top
 		-- sub-pix shift
 		local sy=cy0-y0
 		x0+=sy*dx
+    z0+=sy*dz
 		u0+=sy*du
 		v0+=sy*dv
-		if(y1>127) y1=127
+		if(y1>disp_bottom) y1=disp_bottom
 		for y=cy0,y1 do
 			local span=spans[y]
 			if span then
-				--rectfill(x[1],y,x0,y,offset/16)
-				
-				local a,au,av,b,bu,bv=x0,u0,v0,unpack(span)
-				if(a>b) a,au,av,b,bu,bv=b,bu,bv,a,au,av
-				local ca,cb=a\1+1,b\1
-				if ca<=cb then
+				local ax,au,av,bx,bu,bv=x0,u0,v0,span[1],span[2],span[3]
+				if(ax>bx) ax,au,av,bx,bu,bv=bx,bu,bv,ax,au,av
+				local cax,cbx=ax\1+1,bx\1
+				if cax<=cbx then
 					-- pixel perfect sampling
-					local sa,dab=ca-a,b-a
+					local sa,dab=cax-ax,bx-ax
 					local dau,dav=(bu-au)/dab,(bv-av)/dab
-					tline(ca,y,cb,y,au+sa*dau,av+sa*dav,dau,dav)
+          --rectfill(cax,y,cbx,y,11)
+          pald(z0)
+					tline(cax,y,cbx,y,au+sa*dau,av+sa*dav,dau,dav)
 				end
 			else
 				spans[y]={x0,u0,v0}
 			end
 			x0+=dx
+      z0+=dz
 			u0+=du
 			v0+=dv
 		end
-		x0,y0,u0,v0=_x1,_y1,_u1,_v1
+		x0,y0,z0,u0,v0=_x1,_y1,_z1,_u1,_v1
 	end
 end
 
@@ -74,7 +75,8 @@ function clippolyh(poly,cuty)
     local p=poly[i]
     local cutcurr = p[2] > cuty
     if cutcurr~=cutprev then
-      add(poly,{p0[1]+(p[1]-p0[1])*(cuty-p0[2])/(p[2]-p0[2]),cuty},i)
+      local t=(cuty-p0[2])/(p[2]-p0[2])
+      add(poly,{p0[1]+(p[1]-p0[1])*t,cuty,0,p0[4]+(p[4]-p0[4])*t,p0[5]+(p[5]-p0[5])*t},i)
       i+=1
     end
     if not cutcurr then
@@ -87,26 +89,25 @@ function clippolyh(poly,cuty)
   end
 end
 
-function testclip(fx,fy)
-  local x1,y1 = worldtocam(fx,fy)
-  local x2,y2 = x1+cam_dircos,y1+cam_dirsin
-  local x3,y3 = x1+cam_dircos-cam_dirsin,y1+cam_dirsin+cam_dircos
-  local x4,y4 = x1-cam_dirsin,y1+cam_dircos
-  local poly={{x1,y1},{x2,y2},{x3,y3},{x4,y4}}
-
+function drawfloortile(fx, fy, fz, s)
+  local alt,x1,y1 = cam_z-fz,worldtocam(fx,fy)
+  local poly={
+    {x1,y1,0,s,0},
+    {x1+cam_dircos,y1+cam_dirsin,0,s+1,0},
+    {x1+cam_dircos-cam_dirsin,y1+cam_dirsin+cam_dircos,0,s+1,1},
+    {x1-cam_dirsin,y1+cam_dircos,0,s,1}
+  }
   clippolyh(poly,cam_near)
-
-  local s = -30
-  line(-60,cam_near*s,60,cam_near*s,13)
-  local p0=poly[#poly]
+  if (#poly==0) return
   for i=1,#poly do
     local p=poly[i]
-    line(p0[1]*s,p0[2]*s,p[1]*s,p[2]*s,7)
-    p0=p
+    local df = projplanedist / p[2]
+    p[1],p[2],p[3] = p[1]*df, alt*df, p[2]
   end
+  tpoly(poly)
 end
 
-function drawfloortile(fx, fy, fz, s)
+function drawfloortileold(fx, fy, fz, s)
   -- local x1,y1 = worldtocam(fx,fy)
   -- local x2,y2 = worldtocam(fx+1,fy)
   -- local x3,y3 = worldtocam(fx+1,fy+1)
@@ -256,12 +257,12 @@ function drawwall(x1, y1, x2, y2, z1, z2, sp)
   -- transform coordinates for depth
   local d1,d2 = y1,y2
 
-  local w1 = 1 / y1
+  local w1 = y1
   local df = projplanedist / y1
   x1,y1 = x1*df,z1*df
   local y1b = z2*df
 
-  local w2 = 1 / y2
+  local w2 = y2
   df = projplanedist / y2
   x2,y2 = x2*df,z1*df
   local y2b = z2 * df
@@ -301,7 +302,7 @@ function drawwall(x1, y1, x2, y2, z1, z2, sp)
   -- draw!
   for x=cx1,x2b do
     local t = (x2-x)/dx
-    local u = ((1-t)*t1/w1+t*t2/w2)/((1-t)/w1+t/w2)
+    local u = ((1-t)*t1*w1+t*t2*w2)/((1-t)*w1+t*w2)
     pald(d1)
     local cy1,cy1b = y1\1,y1b\1+1
     if sp==1 then

@@ -66,8 +66,6 @@ draw=function()
   end
 
   drawmethods[currentdraw]()
-
-  testclip(2,2)
 end,
 fps=30},
 edit={
@@ -95,6 +93,7 @@ function _init()
   setupcamera()
   setfov(0.2222)
   buildluamap()
+  initfadepal()
   poke(0x5f2d, 1) --enable mouse
   local i = 1
   for n,v in pairs(modes) do
