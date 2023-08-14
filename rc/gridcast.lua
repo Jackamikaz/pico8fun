@@ -83,7 +83,7 @@ function tpolyb(poly)
   end
   -- the traversal direction depends on the polygon being clockwise or not
   -- so we check the sign of the Z value of a cross product between two segments
-  local pc,pl,pr=poly[topi],poly[warpindex(topi+1,ps)],poly[warpindex(topi-1,ps)]
+  local pc,pl,pr=poly[topi],poly[topi%ps+1],poly[(topi-2)%ps+1]
   local ax,ay,bx,by,cx,cy=pc[1]>>3,topy>>3,pl[1]>>3,pl[2]>>3,pr[1]>>3,pr[2]>>3
   local dir=sgn((bx-ax)*(cy-ay) - (by-ay)*(cx-ax))
   -- declare all used variables
@@ -101,7 +101,7 @@ function tpolyb(poly)
       c+=1
       if (c>ps) return
       -- replace current point with values we already have, then get next point
-      li=warpindex(li-dir,ps)
+      li=(li-1-dir)%ps+1
       local pli=poly[li]
       lx,lz,llz,lt,lu0,lv0,lu1,lv1=lnx,lnz,lnz,0,lu1,lv1,pli[4],pli[5]
       lnx,lnz=pli[1],pli[3]
@@ -119,7 +119,7 @@ function tpolyb(poly)
     while y>rny do
       c+=1
       if (c>ps) return
-      ri=warpindex(ri+dir,ps) -- the only difference is adding dir
+      ri=(ri-1+dir)%ps+1 -- the only difference is adding dir
       local pri=poly[ri]
       rx,rz,rlz,rt,ru0,rv0,ru1,rv1=rnx,rnz,rnz,0,ru1,rv1,pri[4],pri[5]
       rnx,rnz=pri[1],pri[3]
