@@ -20,60 +20,6 @@ function worldtocam(wx,wy)
   return wx*cam_dircos - wy*cam_dirsin, wx*cam_dirsin + wy*cam_dircos
 end
 
--- tpoly adapted from freds72 picocad client https://github.com/freds72/picocad-client 
-function tpoly(poly)
-  local p0=poly[#poly]
-  local spans,x0,y0,z0,u0,v0={},p0[1],p0[2],p0[3],p0[4],p0[5]
-  -- ipairs is slower for small arrays
-  for i=1,#poly do
-    local p1=poly[i]
-    local x1,y1,z1,u1,v1=p1[1],p1[2],p1[3],p1[4],p1[5]
-    local _x1,_y1,_z1,_u1,_v1=x1,y1,z1,u1,v1
-    if(y0>y1) x0,y0,z0,x1,y1,z1,u0,v0,u1,v1=x1,y1,z1,x0,y0,z0,u1,v1,u0,v0
-    local z0o,t,dy=z0,0,y1-y0
-    local dx,dz,dt=(x1-x0)/dy,(z1-z0)/dy,256/dy
-    local cy0=y0\1+1
-    local topcut = y0-disp_top
-    if(topcut<0) x0-=topcut*dx z0-=topcut*dz t-=topcut*dt y0=disp_top cy0=disp_top
-    -- sub-pix shift
-    local sy=cy0-y0
-    x0+=sy*dx
-    z0+=sy*dz
-    t+=sy*dt
-    for y=cy0,min(y1,disp_bottom) do
-      local span=spans[y]
-      local omt = 256-t
-      local det = omt/z0o+t/z1
-      local u,v = (omt*u0/z0o+t*u1/z1)/det,(omt*v0/z0o+t*v1/z1)/det
-      --local u,v=omt*u0+t*u1>>8,omt*v0+t*v1>>8
-      if span then
-        span.used=true
-        local ax,au,av,bx,bu,bv=x0,u,v,span[1],span[2],span[3]
-        if(ax>bx) ax,au,av,bx,bu,bv=bx,bu,bv,ax,au,av
-        local cax,cbx=ax\1+1,bx\1
-        if cax<=cbx then
-          -- pixel perfect sampling
-          local sa,dab=cax-ax,bx-ax
-          local dau,dav=(bu-au)/dab,(bv-av)/dab
-          --rectfill(cax,y,cbx,y,11)
-          pald(z0)
-          tline(cax,y,cbx,y,au+sa*dau,av+sa*dav,dau,dav)
-        end
-      else
-        spans[y]={x0,u,v}
-      end
-      x0+=dx
-      z0+=dz
-      t+=dt
-    end
-    x0,y0,z0,u0,v0=_x1,_y1,_z1,_u1,_v1
-  end
-end
-
-function warpindex(i,s)
-  return (i-1)%s+1
-end
-
 function tpolyb(poly)
   -- find highest point in polygon
   local ps,topy,topi=#poly,0x7fff
@@ -198,11 +144,7 @@ function drawfloortile(fx, fy, fz, s)
     p[1],p[2],p[3] = p[1]*df, alt*df, p[2]
   end
   
-  if btn(🅾️) then
-    tpoly(poly)
-  else
-    tpolyb(poly)
-  end
+  tpolyb(poly)
 end
 
 function drawwall(x1, y1, x2, y2, z1, z2, sp)
@@ -265,27 +207,26 @@ function drawwall(x1, y1, x2, y2, z1, z2, sp)
   y1b += bt*sx
   d1 += dt*sx
 
-  local prec=4--(time()*2)\1%5
-  local prec2=prec*2
+  local prec=8--(time()*2)\1%11
   tline(13+prec)
 
   -- draw!
   for x=cx1,x2b do
-    local t = (x2-x)/dx
-    local u = ((1-t)*t1*w1+t*t2*w2)/((1-t)*w1+t*w2)
+    local t = ((x2-x)<<4)/dx
+    local omt = (1<<4)-t
+    local u = (omt*t1*w1+t*t2*w2)/(omt*w1+t*w2)
     pald(d1)
     local cy1,cy1b = y1\1,y1b\1+1
     if sp==1 then
-      local sa,dab=cy1b-y1b<<prec,y1-y1b<<prec
-      u*=2
-      local v=(z1-z2)*2
-      local dav=((v<<prec2)/dab)
-      tline(x,cy1b,x,cy1,  u<<prec,((4<<prec)+((sa*dav)>>prec)),0,dav)
-      --tline(x,cy1b,  x,cy1,  u*2,4,  0,(z1-z2)/(cy1-cy1b)*2)
+      u=u*2<<prec
+      local v1=4<<prec
+      local v2=v1+(z1-z2)*2
+      local sa,dab=cy1b-y1b,y1-y1b
+      local dav=((v2-v1)<<prec)/dab
+      tline(x,cy1b,x,cy1,  u,v1+sa*dav,0,dav)
     else
-      sspr((sp%16+u)*8,sp\16*8,1,8,x,cy1b,1,cy1-cy1b)
+      sspr((sp%16+u)*8,sp\16*8,1,8,x,cy1b,1,cy1-cy1b+1)
     end
-    --line(x,y1,x,y1b)
 
     y1 += tt
     y1b += bt

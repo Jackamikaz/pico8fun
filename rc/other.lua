@@ -368,3 +368,53 @@ function floortrapeze(l,r,lt,rt,y1,y2,alt,ox,oy)
     r+=rt
   end
 end
+
+-- tpoly adapted from freds72 picocad client https://github.com/freds72/picocad-client 
+function tpoly(poly)
+  local p0=poly[#poly]
+  local spans,x0,y0,z0,u0,v0={},p0[1],p0[2],p0[3],p0[4],p0[5]
+  -- ipairs is slower for small arrays
+  for i=1,#poly do
+    local p1=poly[i]
+    local x1,y1,z1,u1,v1=p1[1],p1[2],p1[3],p1[4],p1[5]
+    local _x1,_y1,_z1,_u1,_v1=x1,y1,z1,u1,v1
+    if(y0>y1) x0,y0,z0,x1,y1,z1,u0,v0,u1,v1=x1,y1,z1,x0,y0,z0,u1,v1,u0,v0
+    local z0o,t,dy=z0,0,y1-y0
+    local dx,dz,dt=(x1-x0)/dy,(z1-z0)/dy,256/dy
+    local cy0=y0\1+1
+    local topcut = y0-disp_top
+    if(topcut<0) x0-=topcut*dx z0-=topcut*dz t-=topcut*dt y0=disp_top cy0=disp_top
+    -- sub-pix shift
+    local sy=cy0-y0
+    x0+=sy*dx
+    z0+=sy*dz
+    t+=sy*dt
+    for y=cy0,min(y1,disp_bottom) do
+      local span=spans[y]
+      local omt = 256-t
+      local det = omt/z0o+t/z1
+      local u,v = (omt*u0/z0o+t*u1/z1)/det,(omt*v0/z0o+t*v1/z1)/det
+      --local u,v=omt*u0+t*u1>>8,omt*v0+t*v1>>8
+      if span then
+        span.used=true
+        local ax,au,av,bx,bu,bv=x0,u,v,span[1],span[2],span[3]
+        if(ax>bx) ax,au,av,bx,bu,bv=bx,bu,bv,ax,au,av
+        local cax,cbx=ax\1+1,bx\1
+        if cax<=cbx then
+          -- pixel perfect sampling
+          local sa,dab=cax-ax,bx-ax
+          local dau,dav=(bu-au)/dab,(bv-av)/dab
+          --rectfill(cax,y,cbx,y,11)
+          pald(z0)
+          tline(cax,y,cbx,y,au+sa*dau,av+sa*dav,dau,dav)
+        end
+      else
+        spans[y]={x0,u,v}
+      end
+      x0+=dx
+      z0+=dz
+      t+=dt
+    end
+    x0,y0,z0,u0,v0=_x1,_y1,_z1,_u1,_v1
+  end
+end
