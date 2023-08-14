@@ -47,6 +47,7 @@ function tpoly(poly)
       local u,v = (omt*u0/z0o+t*u1/z1)/det,(omt*v0/z0o+t*v1/z1)/det
       --local u,v=omt*u0+t*u1>>8,omt*v0+t*v1>>8
       if span then
+        span.used=true
         local ax,au,av,bx,bu,bv=x0,u,v,span[1],span[2],span[3]
         if(ax>bx) ax,au,av,bx,bu,bv=bx,bu,bv,ax,au,av
         local cax,cbx=ax\1+1,bx\1
@@ -79,9 +80,10 @@ function tpolyb(poly)
     local y=poly[i][2]
     if (y<topy) topy=y topi=i
   end
-  local dir=-1--sgn(poly[warpindex(topi+1,ps)][1]-poly[topi][1])
+  local p1,p2,p3=poly[1],poly[2],poly[3]
+  local ax,ay,bx,by,cx,cy=p1[1]>>2,p1[2]>>2,p2[1]>>2,p2[2]>>2,p3[1]>>2,p3[2]>>2
+  local dir=sgn((bx-ax)*(cy-ay) - (by-ay)*(cx-ax))
   local li,ri,lin,rin,lyt,ryt,lx,rx,lz,rz,llz,rlz,lnz,rnz,lt,rt,ldx,rdx,ldz,rdz,ldt,rdt=warpindex(topi+dir,ps),warpindex(topi-dir,ps),topi,topi,topy,topy
-  local fp=poly[topi]
   local lu1,lv1,ru1,rv1,lu0,lv0,ru0,rv0
   local c=0
   for y=max(topy\1+1,disp_top),disp_bottom do
@@ -116,7 +118,7 @@ function tpolyb(poly)
       rx,rz,rt=pri[1],pri[3],0
       ru0,rv0,ru1,rv1=pri[4],pri[5],prin[4],prin[5]
       local nx,ny,nz=prin[1],prin[2],prin[3]
-      rlz,rnz=lz,nz
+      rlz,rnz=rz,nz
       local dy=ny-ryt
       local sy=y-ryt
       ryt=ny
@@ -139,11 +141,13 @@ function tpolyb(poly)
     --local ru,rv=ru0*omt+ru1*rt>>8,rv0*omt+rv1*rt>>8
 
     local clx,crx=lx\1+1,rx\1
-    local sa,dab=clx-lx,rx-lx
-    local dau,dav=(ru-lu)/dab,(rv-lv)/dab
-    pald(rz)
-    tline(clx,y,crx,y,lu+sa*dau,lv+sa*dav,dau,dav)
-    --rectfill(clx,y,crx,y,5+c)
+    if clx<=crx then
+      local sa,dab=clx-lx,rx-lx
+      local dau,dav=(ru-lu)/dab,(rv-lv)/dab
+      pald(lz+rz>>1)
+      tline(clx,y,crx,y,lu+sa*dau,lv+sa*dav,dau,dav)
+      --rectfill(clx,y,crx,y,5+c)
+    end
 
     lx+=ldx
     rx+=rdx
@@ -184,7 +188,7 @@ function drawfloortile(fx, fy, fz, s)
     {x1-cam_dirsin,y1+cam_dircos,0,s,1}
   }
   clippolyh(poly,cam_near)
-  if (#poly==0) return
+  if (#poly<3) return
   for i=1,#poly do
     local p=poly[i]
     local df = projplanedist / p[2]
