@@ -95,6 +95,7 @@ function _init()
   buildluamap()
   initfadepal()
   poke(0x5f2d, 1) --enable mouse
+  poke(0x5f36, 8) --opaque tile 0
   local i = 1
   for n,v in pairs(modes) do
     menuitem(i,n,function() switchmode(v) end)

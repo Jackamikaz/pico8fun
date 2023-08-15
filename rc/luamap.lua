@@ -157,12 +157,5 @@ function buildluamap()
   for i=0,127 do
     mset(i,0,i)
   end
-
-  -- sampling section for the walls
-  for x=0,1 do
-    for y=4,10 do
-      mset(x,y,1)
-    end
-  end
 end
 

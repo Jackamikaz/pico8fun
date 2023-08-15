@@ -20,12 +20,18 @@ function worldtocam(wx,wy)
   return wx*cam_dircos - wy*cam_dirsin, wx*cam_dirsin + wy*cam_dircos
 end
 
+-- function edgeid(x1,y1,x2,y2)
+--   if (y1>y2) x1,y1,x2,y2 = x2,y2,x1,y1
+--   return (x1<<8) | (y1&0xff) | ((x2&0xff)>>8) | ((y2&0xff)>>16)
+-- end
+
 function tpolyb(poly)
   -- find highest point in polygon
-  local ps,topy,topi=#poly,0x7fff
+  local ps,topy,boty,topi=#poly,0x7fff,0x8000
   for i=1,ps do
     local y=poly[i][2]
-    if (y<topy) topy=y topi=i
+    if (y<topy) topy,topi=y,i
+    if (y>boty) boty=y
   end
   -- the traversal direction depends on the polygon being clockwise or not
   -- so we check the sign of the Z value of a cross product between two segments
@@ -38,14 +44,10 @@ function tpolyb(poly)
   local li,ri=topi,topi
   local lnx,lny,lnz,lu1,lv1 = unpack(pc)
   local rnx,rny,rnz,ru1,rv1 = lnx,lny,lnz,lu1,lv1
-  local c=0
   -- top and bottom clipping is managed by the for loop
-  for y=max(topy\1+1,disp_top),disp_bottom do
+  for y=max(topy\1+1,disp_top),min(boty,disp_bottom) do
     -- trigger traversal to the next segment (will trigger the first time)
     while y>lny do
-      -- triggering more than the number of points means we're done
-      c+=1
-      if (c>ps) return
       -- replace current point with values we already have, then get next point
       li=(li-1-dir)%ps+1
       local pli=poly[li]
@@ -63,8 +65,6 @@ function tpolyb(poly)
     end
     -- same with the other direction
     while y>rny do
-      c+=1
-      if (c>ps) return
       ri=(ri-1+dir)%ps+1 -- the only difference is adding dir
       local pri=poly[ri]
       rx,rz,rlz,rt,ru0,rv0,ru1,rv1=rnx,rnz,rnz,0,ru1,rv1,pri[4],pri[5]
@@ -131,11 +131,12 @@ end
 function drawfloortile(fx, fy, fz, s)
   local alt,x1,y1 = cam_z-fz,worldtocam(fx,fy)
   local poly={
-    {x1,y1,0,s,0},
-    {x1+cam_dircos,y1+cam_dirsin,0,s+1,0},
-    {x1+cam_dircos-cam_dirsin,y1+cam_dirsin+cam_dircos,0,s+1,1},
-    {x1-cam_dirsin,y1+cam_dircos,0,s,1}
+    {x1,y1,0,0,0},
+    {x1+cam_dircos,y1+cam_dirsin,0,2,0},
+    {x1+cam_dircos-cam_dirsin,y1+cam_dirsin+cam_dircos,0,2,2},
+    {x1-cam_dirsin,y1+cam_dircos,0,0,2}
   }
+  poke(0x5f38,1,1,s)
   clippolyh(poly,cam_near)
   if (#poly<3) return
   for i=1,#poly do
@@ -153,18 +154,15 @@ function drawwall(x1, y1, x2, y2, z1, z2, sp)
   x2,y2 = worldtocam(x2,y2)
   if (z1>z2) z1,z2 = z2,z1
   z1,z2 = cam_z-z1,cam_z-z2
-  local t1,t2 = 1,0
+  local t1,t2,swap = 1,0
+  if (y2<y1) x1,y1,x2,y2,swap=x2,y2,x1,y1,true 
   if y1 < cam_near then
     if (y2 < cam_near) return
     t2 = (cam_near - y1)/(y2-y1)
     x1 += (x2-x1)*t2
     y1 = cam_near
-  elseif y2 < cam_near then
-    t1 = (cam_near - y2)/(y1-y2)
-    x2 += (x1-x2)*t1
-    y2 = cam_near
-    t1 = 1-t1
   end
+  if (swap) x1,y1,x2,y2,t1,t2=x2,y2,x1,y1,1-t2,0
 
   -- transform coordinates for depth
   local d1,d2 = y1,y2
@@ -210,6 +208,8 @@ function drawwall(x1, y1, x2, y2, z1, z2, sp)
   local prec=8--(time()*2)\1%11
   tline(13+prec)
 
+  if (sp==1) poke(0x5f38,1,1,sp)
+
   -- draw!
   for x=cx1,x2b do
     local t = ((x2-x)<<4)/dx
@@ -219,11 +219,10 @@ function drawwall(x1, y1, x2, y2, z1, z2, sp)
     local cy1,cy1b = y1\1,y1b\1+1
     if sp==1 then
       u=u*2<<prec
-      local v1=4<<prec
-      local v2=v1+(z1-z2)*2
+      local v2=z1-z2<<1
       local sa,dab=cy1b-y1b,y1-y1b
-      local dav=((v2-v1)<<prec)/dab
-      tline(x,cy1b,x,cy1,  u,v1+sa*dav,0,dav)
+      local dav=(v2<<prec)/dab
+      tline(x,cy1b,x,cy1,  u,sa*dav,0,dav)
     else
       sspr((sp%16+u)*8,sp\16*8,1,8,x,cy1b,1,cy1-cy1b+1)
     end
