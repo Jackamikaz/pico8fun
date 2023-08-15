@@ -25,7 +25,7 @@ end
 --   return (x1<<8) | (y1&0xff) | ((x2&0xff)>>8) | ((y2&0xff)>>16)
 -- end
 
-function tpolyb(poly)
+function tpolyb(poly,dir)
   -- find highest point in polygon
   local ps,topy,boty,topi=#poly,0x7fff,0x8000
   for i=1,ps do
@@ -35,14 +35,14 @@ function tpolyb(poly)
   end
   -- the traversal direction depends on the polygon being clockwise or not
   -- so we check the sign of the Z value of a cross product between two segments
-  local pc,pl,pr=poly[topi],poly[topi%ps+1],poly[(topi-2)%ps+1]
-  local ax,ay,bx,by,cx,cy=pc[1]>>3,topy>>3,pl[1]>>3,pl[2]>>3,pr[1]>>3,pr[2]>>3
-  local dir=sgn((bx-ax)*(cy-ay) - (by-ay)*(cx-ax))
+  -- local pc,pl,pr=poly[topi],poly[topi%ps+1],poly[(topi-2)%ps+1]
+  -- local ax,ay,bx,by,cx,cy=pc[1]>>3,topy>>3,pl[1]>>3,pl[2]>>3,pr[1]>>3,pr[2]>>3
+  -- local dir=sgn((bx-ax)*(cy-ay) - (by-ay)*(cx-ax))
   -- declare all used variables
   local lx,llz,lz,lt,lu0,lv0,ldx,ldz,ldt,rx,rlz,rz,rt,ru0,rv0,rdx,rdz,rdt
   -- prefill values for the next point in the segment (here it's the top one)
   local li,ri=topi,topi
-  local lnx,lny,lnz,lu1,lv1 = unpack(pc)
+  local lnx,lny,lnz,lu1,lv1 = unpack(poly[topi])
   local rnx,rny,rnz,ru1,rv1 = lnx,lny,lnz,lu1,lv1
   -- top and bottom clipping is managed by the for loop
   for y=max(topy\1+1,disp_top),min(boty,disp_bottom) do
@@ -145,7 +145,8 @@ function drawfloortile(fx, fy, fz, s)
     p[1],p[2],p[3] = p[1]*df, alt*df, p[2]
   end
   
-  tpolyb(poly)
+  tpolyb(poly,sgn(fz-cam_z))
+  polycount+=1
 end
 
 function drawwall(x1, y1, x2, y2, z1, z2, sp)
@@ -208,7 +209,8 @@ function drawwall(x1, y1, x2, y2, z1, z2, sp)
   local prec=8--(time()*2)\1%11
   tline(13+prec)
 
-  if (sp==1) poke(0x5f38,1,1,sp)
+  --if (sp==1)
+  poke(0x5f38,1,1,sp)
 
   -- draw!
   for x=cx1,x2b do
@@ -217,15 +219,15 @@ function drawwall(x1, y1, x2, y2, z1, z2, sp)
     local u = (omt*t1*w1+t*t2*w2)/(omt*w1+t*w2)
     pald(d1)
     local cy1,cy1b = y1\1,y1b\1+1
-    if sp==1 then
+    --if sp==1 then
       u=u*2<<prec
       local v2=z1-z2<<1
       local sa,dab=cy1b-y1b,y1-y1b
       local dav=(v2<<prec)/dab
       tline(x,cy1b,x,cy1,  u,sa*dav,0,dav)
-    else
-      sspr((sp%16+u)*8,sp\16*8,1,8,x,cy1b,1,cy1-cy1b+1)
-    end
+    --else
+    --  sspr((sp%16+u)*8,sp\16*8,1,8,x,cy1b,1,cy1-cy1b+1)
+    --end
 
     y1 += tt
     y1b += bt
@@ -233,6 +235,7 @@ function drawwall(x1, y1, x2, y2, z1, z2, sp)
   end
 
   tline(13)
+  polycount+=1
 end
 
 function traverse3Dcell(x,y,ordhandler)

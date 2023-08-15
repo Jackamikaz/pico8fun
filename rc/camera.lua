@@ -2,7 +2,7 @@ function setupcamera()
   cam_x = 0
   cam_y = 0
   cam_z = 0.5
-  cam_far = 6
+  cam_far = 5
   cam_near = 0.085
   disp_top = -64
   disp_bottom = 64

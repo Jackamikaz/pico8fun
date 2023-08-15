@@ -44,7 +44,11 @@ end,
 --end,
 function() -- MY "GRIDCASTING" ------------------------------
   camera(-64,-64)
+  clip(0,disp_top+64,128,disp_bottom-disp_top)
+  polycount=0
   disperscan(traverse3Dcell,ordhandlerdraw)
+  clip()
+  ?polycount,-61,-61,7
 end}
 
 currentdraw = 2
@@ -52,8 +56,8 @@ currentdraw = 2
 modes = {
 play={
 enter=function()
-  disp_top=-64
-  disp_bottom=64
+  disp_top=-48
+  disp_bottom=48
 end,
 update=function()
   player:update()
