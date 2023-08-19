@@ -25,7 +25,7 @@ end
 --   return (x1<<8) | (y1&0xff) | ((x2&0xff)>>8) | ((y2&0xff)>>16)
 -- end
 
-function tpolyb(poly,dir)
+function tpolyflat(poly,alt)
   -- find highest point in polygon
   local ps,topy,boty,topi=#poly,0x7fff,0x8000
   for i=1,ps do
@@ -38,6 +38,7 @@ function tpolyb(poly,dir)
   -- local pc,pl,pr=poly[topi],poly[topi%ps+1],poly[(topi-2)%ps+1]
   -- local ax,ay,bx,by,cx,cy=pc[1]>>3,topy>>3,pl[1]>>3,pl[2]>>3,pr[1]>>3,pr[2]>>3
   -- local dir=sgn((bx-ax)*(cy-ay) - (by-ay)*(cx-ax))
+  local dir=sgn(alt)
   -- declare all used variables
   local lx,llz,lz,lt,lu0,lv0,ldx,ldz,ldt,rx,rlz,rz,rt,ru0,rv0,rdx,rdz,rdt
   -- prefill values for the next point in the segment (here it's the top one)
@@ -81,20 +82,25 @@ function tpolyb(poly,dir)
     local clx,crx=lx\1+1,rx\1
     if clx<=crx then
       -- almost perspective correct u,v, for both sides
-      local omt = 256-lt
-      local det = omt/llz+lt/lnz
-      local lu,lv=(omt*lu0/llz+lt*lu1/lnz)/det,(omt*lv0/llz+lt*lv1/lnz)/det
+      -- local omt = 256-lt
+      -- local det = omt/llz+lt/lnz
+      -- local lu,lv=(omt*lu0/llz+lt*lu1/lnz)/det,(omt*lv0/llz+lt*lv1/lnz)/det
   
-      omt = 256-rt
-      det = omt/rlz+rt/rnz
-      local ru,rv=(omt*ru0/rlz+rt*ru1/rnz)/det,(omt*rv0/rlz+rt*rv1/rnz)/det
+      -- omt = 256-rt
+      -- det = omt/rlz+rt/rnz
+      -- local ru,rv=(omt*ru0/rlz+rt*ru1/rnz)/det,(omt*rv0/rlz+rt*rv1/rnz)/det
+      local z = y*alt/projplanedist
+      local lu,lv = lx*z/projplanedist,y*z/projplanedist
+      lu,lv = lu*cam_dircos+lv*cam_dirsin+cam_x,-lu*cam_dirsin+lv*cam_dircos+cam_y
+
+      local ru,rv = rx*z/projplanedist,y*z/projplanedist
+      ru,rv = ru*cam_dircos+rv*cam_dirsin+cam_x,-ru*cam_dirsin+rv*cam_dircos+cam_y
 
       -- pixel perfect sampling
       local sa,dab=clx-lx,rx-lx
       local dau,dav=(ru-lu)/dab,(rv-lv)/dab
       pald(lz+rz>>1)
       tline(clx,y,crx,y,lu+sa*dau,lv+sa*dav,dau,dav)
-      --rectfill(clx,y,crx,y,5+c)
     end
 
     -- next scanline
@@ -145,7 +151,7 @@ function drawfloortile(fx, fy, fz, s)
     p[1],p[2],p[3] = p[1]*df, alt*df, p[2]
   end
   
-  tpolyb(poly,sgn(fz-cam_z))
+  tpolyflat(poly,fz-cam_z)
   polycount+=1
 end
 
