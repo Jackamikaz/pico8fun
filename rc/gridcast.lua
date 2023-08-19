@@ -40,76 +40,60 @@ function tpolyflat(poly,alt)
   -- local dir=sgn((bx-ax)*(cy-ay) - (by-ay)*(cx-ax))
   local dir=sgn(alt)
   -- declare all used variables
-  local lx,llz,lz,lt,lu0,lv0,ldx,ldz,ldt,rx,rlz,rz,rt,ru0,rv0,rdx,rdz,rdt
+  local lx,ldx,rx,rdx
   -- prefill values for the next point in the segment (here it's the top one)
+  local lnx,lny = unpack(poly[topi])
+  local rnx,rny = lnx,lny
+  topi-=1 -- back to 0 based index
   local li,ri=topi,topi
-  local lnx,lny,lnz,lu1,lv1 = unpack(poly[topi])
-  local rnx,rny,rnz,ru1,rv1 = lnx,lny,lnz,lu1,lv1
   -- top and bottom clipping is managed by the for loop
   for y=max(topy\1+1,disp_top),min(boty,disp_bottom) do
     -- trigger traversal to the next segment (will trigger the first time)
     while y>lny do
       -- replace current point with values we already have, then get next point
-      li=(li-1-dir)%ps+1
-      local pli=poly[li]
-      lx,lz,llz,lt,lu0,lv0,lu1,lv1=lnx,lnz,lnz,0,lu1,lv1,pli[4],pli[5]
-      lnx,lnz=pli[1],pli[3]
+      li=(li-dir)%ps
+      local pli=poly[li+1]
+      lx=lnx
+      lnx=pli[1]
       -- calculate slopes
       local ny=pli[2]
-      local dy,sy=ny-lny,y-lny
-      lny=ny
-      ldx,ldz,ldt = (lnx-lx)/dy, (lnz-lz)/dy, 256/dy
+      ldx = (lnx-lx)/(ny-lny)
       -- sub pixel shift
-      lx += sy*ldx
-      lz += sy*ldz
-      lt += sy*ldt
+      lx += (y-lny)*ldx
+      lny=ny
     end
     -- same with the other direction
     while y>rny do
-      ri=(ri-1+dir)%ps+1 -- the only difference is adding dir
-      local pri=poly[ri]
-      rx,rz,rlz,rt,ru0,rv0,ru1,rv1=rnx,rnz,rnz,0,ru1,rv1,pri[4],pri[5]
-      rnx,rnz=pri[1],pri[3]
+      ri=(ri+dir)%ps -- the only difference is adding dir
+      local pri=poly[ri+1]
+      rx=rnx
+      rnx=pri[1]
       local ny=pri[2]
-      local dy,sy=ny-rny,y-rny
+      rdx = (rnx-rx)/(ny-rny)
+      rx += (y-rny)*rdx
       rny=ny
-      rdx,rdz,rdt = (rnx-rx)/dy, (rnz-rz)/dy, 256/dy
-      rx += sy*rdx
-      rz += sy*rdz
-      rt += sy*rdt
     end
 
     local clx,crx=lx\1+1,rx\1
     if clx<=crx then
-      -- almost perspective correct u,v, for both sides
-      -- local omt = 256-lt
-      -- local det = omt/llz+lt/lnz
-      -- local lu,lv=(omt*lu0/llz+lt*lu1/lnz)/det,(omt*lv0/llz+lt*lv1/lnz)/det
-  
-      -- omt = 256-rt
-      -- det = omt/rlz+rt/rnz
-      -- local ru,rv=(omt*ru0/rlz+rt*ru1/rnz)/det,(omt*rv0/rlz+rt*rv1/rnz)/det
-      local z = y*alt/projplanedist
-      local lu,lv = lx*z/projplanedist,y*z/projplanedist
-      lu,lv = lu*cam_dircos+lv*cam_dirsin+cam_x,-lu*cam_dirsin+lv*cam_dircos+cam_y
+      -- grabbing u,v by unprojecting (reverse worldtocam)
+      local z=projplanedist*alt/y
+      local lu,lv = lx/projplanedist*z,z
+      lu,lv = lu*cam_dirsin-lv*cam_dircos+cam_x,-lu*cam_dircos-lv*cam_dirsin+cam_y
 
-      local ru,rv = rx*z/projplanedist,y*z/projplanedist
-      ru,rv = ru*cam_dircos+rv*cam_dirsin+cam_x,-ru*cam_dirsin+rv*cam_dircos+cam_y
+      local ru,rv = rx/projplanedist*z,z
+      ru,rv = ru*cam_dirsin-rv*cam_dircos+cam_x,-ru*cam_dircos-rv*cam_dirsin+cam_y
 
       -- pixel perfect sampling
       local sa,dab=clx-lx,rx-lx
       local dau,dav=(ru-lu)/dab,(rv-lv)/dab
-      pald(lz+rz>>1)
+      pald(-z)
       tline(clx,y,crx,y,lu+sa*dau,lv+sa*dav,dau,dav)
     end
 
     -- next scanline
     lx+=ldx
     rx+=rdx
-    lz+=ldz
-    rz+=rdz
-    lt+=ldt
-    rt+=rdt
   end
 end
 
@@ -121,7 +105,8 @@ function clippolyh(poly,cuty)
     local cutcurr = p[2] > cuty
     if cutcurr~=cutprev then
       local t=(cuty-p0[2])/(p[2]-p0[2])
-      add(poly,{p0[1]+(p[1]-p0[1])*t,cuty,0,p0[4]+(p[4]-p0[4])*t,p0[5]+(p[5]-p0[5])*t},i)
+      --add(poly,{p0[1]+(p[1]-p0[1])*t,cuty,0,p0[4]+(p[4]-p0[4])*t,p0[5]+(p[5]-p0[5])*t},i)
+      add(poly,{p0[1]+(p[1]-p0[1])*t,cuty},i)
       i+=1
     end
     if not cutcurr then
@@ -137,10 +122,10 @@ end
 function drawfloortile(fx, fy, fz, s)
   local alt,x1,y1 = cam_z-fz,worldtocam(fx,fy)
   local poly={
-    {x1,y1,0,0,0},
-    {x1+cam_dircos,y1+cam_dirsin,0,2,0},
-    {x1+cam_dircos-cam_dirsin,y1+cam_dirsin+cam_dircos,0,2,2},
-    {x1-cam_dirsin,y1+cam_dircos,0,0,2}
+    {x1,y1},
+    {x1+cam_dircos,y1+cam_dirsin},
+    {x1+cam_dircos-cam_dirsin,y1+cam_dirsin+cam_dircos},
+    {x1-cam_dirsin,y1+cam_dircos}
   }
   poke(0x5f38,1,1,s)
   clippolyh(poly,cam_near)
@@ -148,7 +133,7 @@ function drawfloortile(fx, fy, fz, s)
   for i=1,#poly do
     local p=poly[i]
     local df = projplanedist / p[2]
-    p[1],p[2],p[3] = p[1]*df, alt*df, p[2]
+    p[1],p[2] = p[1]*df, alt*df
   end
   
   tpolyflat(poly,fz-cam_z)
